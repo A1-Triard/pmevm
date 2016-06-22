@@ -32,8 +32,10 @@ test-suite pmevm-test
   type:                exitcode-stdio-1.0
   hs-source-dirs:      test
   main-is:             Spec.hs
+  other-modules:       Data.Pmevm.Spec
   build-depends:       base
                      , pmevm
+                     , HUnit
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   default-language:    Haskell2010
 

@@ -3,8 +3,10 @@ module Data.Pmevm
   , CPURegisterExt (..)
   , CPURegisterPair (..)
   , CPURegisterWord (..)
-  , CPUFlag (..)
-  , CPUCommand (..)
+  , CPUCondition (..)
+  , CPUOperation (..)
+  , operationCode
+  , cpuOperation
   ) where
 
 import Data.Pmevm.Native
