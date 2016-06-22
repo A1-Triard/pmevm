@@ -10,12 +10,18 @@ data PSW = PSW
   , fAuxCarry :: !Bool
   } deriving (Eq, Show, Ord)
 
-bit :: Bool -> Int
-bit False = 0
-bit True = 1
+flagValue :: Bool -> Int
+flagValue False = 0
+flagValue True = 1
 
 pswValue :: PSW -> Int
-pswValue p = (bit $ fCarry p) + 1 * 2 + (bit $ fParity p) * 4 + (bit $ fAuxCarry p) * 16 + (bit $ fZero p) * 64 + (bit $ fSign p) * 128
+pswValue p
+  = (flagValue $ fCarry p)
+  + 1 * 2
+  + (flagValue $ fParity p) * 4
+  + (flagValue $ fAuxCarry p) * 16
+  + (flagValue $ fZero p) * 64
+  + (flagValue $ fSign p) * 128
 
 data CPURegister = R_A | R_B | R_C | R_D | R_E | R_H | R_L | R_M deriving (Eq, Show, Ord, Enum)
 
@@ -239,7 +245,7 @@ cycles (JCC _) _ = 10
 cycles JMP _ = 10
 cycles (CCC f) p = if checkFlag f p then 17 else 11
 cycles CALL _ = 17
-cycles (LXI rp) _ = 10
+cycles (LXI _) _ = 10
 cycles STA _ = 13
 cycles LDA _ = 13
 cycles SHLD _ = 16
