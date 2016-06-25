@@ -25,6 +25,7 @@ sklTest :: Assertion
 sklTest = do
   let k0 = initKeyboard
   let k1 = initKeyboard { key2 = True }
+  let k2 = initKeyboard { keyHB = True }
   let c0 = setPC (hl 0o014 0o000) $ setProgram testProgram $ setProgram monitor initComputer
   let c1 = wait 100000 k0 c0
   assertEqual "" 0 $ getPortOut 1 c1
@@ -32,6 +33,10 @@ sklTest = do
   assertEqual "" 2 $ getPortOut 1 c2
   let c3 = wait 100000 k0 c2
   assertEqual "" 2 $ getPortOut 1 c3
+  let c4 = wait 100000 k2 c3
+  assertEqual "" 8 $ getPortOut 1 c4
+  let c5 = wait 100000 k0 c4
+  assertEqual "" 8 $ getPortOut 1 c5
 
 testProgram :: Program
 testProgram = Program
