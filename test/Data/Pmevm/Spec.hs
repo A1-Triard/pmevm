@@ -25,11 +25,11 @@ opCodesCase op_code = do
 simpleProgramStepByStepTest :: Assertion
 simpleProgramStepByStepTest = do
   let c0 = setMemory 2 2 $ setMemory 1 (operationCode OUT) $ setMemory 0 (operationCode $ INR R_A) $ initComputer
-  assertEqual "" 0 $ getPort 2 c0
+  assertEqual "" 0 $ getPortOut 2 c0
   let c1 = cpuStep c0
-  assertEqual "" 0 $ getPort 2 c1
+  assertEqual "" 0 $ getPortOut 2 c1
   let c2 = cpuStep c1
-  assertEqual "" 1 $ getPort 2 c2
+  assertEqual "" 1 $ getPortOut 2 c2
 
 jccTest :: Assertion
 jccTest = do
@@ -46,7 +46,7 @@ jccTest = do
 sumNumbersShortProgramStepByStepTest :: Assertion
 sumNumbersShortProgramStepByStepTest = do
   let c0 = setPC (hl 0o014 0o000) $ setProgram sumNumbersShortProgram initComputer
-  assertEqual "1" 0 $ getPort 0 c0
+  assertEqual "1" 0 $ getPortOut 0 c0
   assertEqual "2" (hl 0o014 0o000) $ getPC c0
   let c1 = cpuStep c0
   assertEqual "3" (hl 0o014 0o002) $ getPC c1
@@ -66,10 +66,10 @@ sumNumbersShortProgramStepByStepTest = do
 sumNumbersProgramStepByStepTest :: Assertion
 sumNumbersProgramStepByStepTest = do
   let c0 = setPC (hl 0o014 0o000) $ setProgram sumNumbersProgram initComputer
-  assertEqual "" 0 $ getPort 0 c0
+  assertEqual "" 0 $ getPortOut 0 c0
   let c = take 100 $ iterate cpuStep c0
   let ch = fromMaybe initComputer $ find isCPUHalted c
-  assertEqual "" 210 $ getPort 0 ch
+  assertEqual "" 210 $ getPortOut 0 ch
 
 sumNumbersProgram :: Program
 sumNumbersProgram = Program

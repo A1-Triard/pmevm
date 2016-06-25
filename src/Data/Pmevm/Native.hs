@@ -386,10 +386,10 @@ type Memory = Vector Word8
 initMemory :: Memory
 initMemory = V.replicate (fromIntegral (maxBound :: Word16) + 1) 0
 
-type Ports = Vector Word8
+type Ports = Vector (Word8, Word8)
 
 initPorts :: Ports
-initPorts = V.replicate (fromIntegral (maxBound :: Word8) + 1) 0
+initPorts = V.replicate (fromIntegral (maxBound :: Word8) + 1) (0, 0)
 
 data CPU = CPU
   { isHalted :: !Bool
@@ -565,11 +565,11 @@ executeOperation JMP c = executeJump c
 executeOperation JMP' c = executeJump c
 executeOperation OUT (Computer o m p) =
   let n = loadByte m p in
-  let o' = o // [(fromIntegral n, regA p)] in
+  let o' = o // [(fromIntegral n, (fst $ fromMaybe (0, 0) $ o !? fromIntegral n, regA p))] in
   Computer o' m $ p { regPC = regPC p + 2 }
 executeOperation IN (Computer o m p) =
   let n = loadByte m p in
-  let b = fromMaybe 0 $ o !? (fromIntegral n) in
+  let b = fst $ fromMaybe (0, 0) $ o !? fromIntegral n in
   Computer o m $ p { regA = b, regPC = regPC p + 2 }
 executeOperation XTHL (Computer o m p) =
   let l = regL p in
@@ -786,11 +786,17 @@ hl h l = (fromIntegral h `shift` 8) .|. fromIntegral l
 getTicks :: Computer -> Int
 getTicks = timer . cpu
 
-getPort :: Word8 -> Computer -> Word8
-getPort n (Computer o _ _) = fromMaybe 0 $ o !? fromIntegral n
+getPortIn :: Word8 -> Computer -> Word8
+getPortIn n (Computer o _ _) = fst $ fromMaybe (0, 0) $ o !? fromIntegral n
 
-setPort :: Word8 -> Word8 -> Computer -> Computer
-setPort n a (Computer o m p) = Computer (o // [(fromIntegral n, a)]) m p
+setPortIn :: Word8 -> Word8 -> Computer -> Computer
+setPortIn n a (Computer o m p) = Computer (o // [(fromIntegral n, (a, snd $ fromMaybe (0, 0) $ o !? fromIntegral n))]) m p
+
+getPortOut :: Word8 -> Computer -> Word8
+getPortOut n (Computer o _ _) = snd $ fromMaybe (0, 0) $ o !? fromIntegral n
+
+setPortOut :: Word8 -> Word8 -> Computer -> Computer
+setPortOut n a (Computer o m p) = Computer (o // [(fromIntegral n, (fst $ fromMaybe (0, 0) $ o !? fromIntegral n, a))]) m p
 
 getMemory :: Word16 -> Computer -> Word8
 getMemory addr (Computer _ m _) = fromMaybe 0 $ m !? fromIntegral addr

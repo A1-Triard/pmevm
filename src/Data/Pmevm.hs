@@ -12,8 +12,10 @@ module Data.Pmevm
   , initComputer
   , hl
   , getTicks
-  , getPort
-  , setPort
+  , getPortIn
+  , setPortIn
+  , getPortOut
+  , setPortOut
   , getMemory
   , setMemory
   , isCPUHalted

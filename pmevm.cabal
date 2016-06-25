@@ -19,6 +19,8 @@ library
                      , Data.Pmevm.Native
                      , Data.Pmevm.Monitor
                      , Data.Pmevm.Monitor.Native
+                     , Data.Pmevm.Keyboard
+                     , Data.Pmevm.Keyboard.Native
   build-depends:       base >= 4.7 && < 5
                      , vector
   default-language:    Haskell2010
