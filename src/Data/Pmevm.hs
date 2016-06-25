@@ -21,6 +21,8 @@ module Data.Pmevm
   , setPC
   , getRegister
   , getFlag
+  , Program (..)
+  , setProgram
   ) where
 
 import Data.Pmevm.Native

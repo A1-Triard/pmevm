@@ -811,3 +811,17 @@ getRegister r c = getReg r (memory c) (cpu c)
 
 getFlag :: CPUCondition -> Computer -> Bool
 getFlag cond c = fitCondition cond (psw $ cpu c)
+
+newtype Program = Program [(Word8, Word8, Word8, String)]
+
+setProgram :: Program -> Computer -> Computer
+setProgram (Program program) computer = foldl (\c (address_h, address_l, opcode, _) -> setMemory (hl address_h address_l) opcode c) computer program
+
+showByte :: Word8 -> String
+showByte b
+  | b < 8 = "00" ++ showOct b ""
+  | b < 64 = "0" ++ showOct b ""
+  | otherwise = showOct b ""
+
+instance Show Program where
+  show (Program p) = intercalate "\n" [showByte h ++ " " ++ showByte l ++ " " ++ showByte c ++ " " ++ t | (h, l, c, t) <- p]
