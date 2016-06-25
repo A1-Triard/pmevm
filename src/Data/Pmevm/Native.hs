@@ -394,6 +394,7 @@ initPorts = V.replicate (fromIntegral (maxBound :: Word8) + 1) 0
 data CPU = CPU
   { isHalted :: !Bool
   , interruptsEnabled :: !Bool
+  , timer :: Int
   , psw :: !PSW
   , regA :: !Word8
   , regB :: !Word8
@@ -468,7 +469,7 @@ asHalted :: CPU -> Maybe CPU
 asHalted p = if isHalted p then Just p else Nothing
 
 initCPU :: CPU
-initCPU = CPU False True (pswScan 0) 0 0 0 0 0 0 0 0 0
+initCPU = CPU False True 0 (pswScan 0) 0 0 0 0 0 0 0 0 0
 
 data Computer = Computer { ports :: Ports, memory :: Memory, cpu :: CPU }
 
@@ -771,16 +772,19 @@ executeOperation (PUSH rs) (Computer o m p) =
   let m' = m // [(fromIntegral (regSP p - 1), h), (fromIntegral (regSP p - 2), l)] in
   Computer o m' $ p { regSP = regSP p - 2, regPC = regPC p + 1 }
 executeOperation (CALL _) c = executeCall c
-executeOperation (RST n) (Computer o m _) = Computer o m $ initCPU { regPC = fromIntegral n * 8 }
+executeOperation (RST n) (Computer o m p) = Computer o m $ p { regPC = fromIntegral n * 8 }
 
 cpuStep :: Computer -> Computer
 cpuStep (Computer o m p) =
   let op_code = fromMaybe 0 $ m !? (fromIntegral $ regPC p) in
   let op = cpuOperation op_code in
-  executeOperation op (Computer o m p)
+  executeOperation op (Computer o m p { timer = timer p + cycles op (psw p) })
 
 hl :: Word8 -> Word8 -> Word16
 hl h l = (fromIntegral h `shift` 8) .|. fromIntegral l
+
+getCycles :: Computer -> Int
+getCycles = timer . cpu
 
 getPort :: Word8 -> Computer -> Word8
 getPort n (Computer o _ _) = fromMaybe 0 $ o !? fromIntegral n

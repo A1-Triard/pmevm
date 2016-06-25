@@ -11,6 +11,7 @@ module Data.Pmevm
   , Computer
   , initComputer
   , hl
+  , getCycles
   , getPort
   , setPort
   , getMemory
