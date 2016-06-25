@@ -7,6 +7,13 @@ module Data.Pmevm
   , CPUOperation (..)
   , operationCode
   , cpuOperation
+  , cpuStep
+  , Computer
+  , initComputer
+  , getPort
+  , setPort
+  , getMemory
+  , setMemory
   ) where
 
 import Data.Pmevm.Native
