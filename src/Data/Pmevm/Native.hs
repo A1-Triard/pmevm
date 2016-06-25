@@ -67,7 +67,7 @@ cpuRegister _ = error "cpuRegister"
 
 data CPURegisterExt = E_BC | E_DE deriving (Eq, Show, Ord, Enum)
 data CPURegisterPair = R_BC | R_DE | R_HL | R_SP deriving (Eq, Show, Ord, Enum)
-data CPURegisterWord = W_BC | W_DE | W_HL | W_APSW deriving (Eq, Show, Ord, Enum)
+data CPURegisterWord = W_BC | W_DE | W_HL | W_PSWA deriving (Eq, Show, Ord, Enum)
 
 extRegisterCode :: CPURegisterExt -> Word8
 extRegisterCode E_BC = 0
@@ -95,13 +95,13 @@ registerWordCode :: CPURegisterWord -> Word8
 registerWordCode W_BC = 0
 registerWordCode W_DE = 2
 registerWordCode W_HL = 4
-registerWordCode W_APSW = 6
+registerWordCode W_PSWA = 6
 
 cpuRegisterWord :: Word8 -> CPURegisterWord
 cpuRegisterWord 0 = W_BC
 cpuRegisterWord 2 = W_DE
 cpuRegisterWord 4 = W_HL
-cpuRegisterWord 6 = W_APSW
+cpuRegisterWord 6 = W_PSWA
 cpuRegisterWord _ = error "cpuRegisterWord"
 
 data CPUCondition = C_NZ | C_Z | C_NC | C_C | C_PO | C_PE | C_P | C_M deriving (Eq, Show, Ord, Enum)
@@ -442,13 +442,13 @@ getRegWord :: CPURegisterWord -> CPU -> Word16
 getRegWord W_BC p = fromIntegral (regB p) * 256 + fromIntegral (regC p)
 getRegWord W_DE p = fromIntegral (regD p) * 256 + fromIntegral (regE p)
 getRegWord W_HL p = fromIntegral (regH p) * 256 + fromIntegral (regL p)
-getRegWord W_APSW p = fromIntegral (regA p) * 256 + fromIntegral (pswCode $ psw p)
+getRegWord W_PSWA p = fromIntegral (pswCode $ psw p) * 256 + fromIntegral (regA p)
 
 setRegWord :: CPURegisterWord -> Word16 -> CPU -> CPU
 setRegWord W_BC w p = p { regB = fromIntegral ((w .&. 0xFF00) `shift` (-8)), regC = fromIntegral (w .&. 0x00FF) }
 setRegWord W_DE w p = p { regD = fromIntegral ((w .&. 0xFF00) `shift` (-8)), regE = fromIntegral (w .&. 0x00FF) }
 setRegWord W_HL w p = p { regH = fromIntegral ((w .&. 0xFF00) `shift` (-8)), regL = fromIntegral (w .&. 0x00FF) }
-setRegWord W_APSW w p = p { regA = fromIntegral ((w .&. 0xFF00) `shift` (-8)), psw = pswScan $ fromIntegral (w .&. 0x00FF) }
+setRegWord W_PSWA w p = p { psw = pswScan $ fromIntegral ((w .&. 0xFF00) `shift` (-8)), regA = fromIntegral (w .&. 0x00FF) }
 
 getRegExt :: CPURegisterExt -> CPU -> Word16
 getRegExt E_BC p = fromIntegral (regB p) * 256 + fromIntegral (regC p)
