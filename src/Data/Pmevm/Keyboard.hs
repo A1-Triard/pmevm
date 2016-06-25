@@ -10,8 +10,8 @@ module Data.Pmevm.Keyboard
   , key7
   , keyHB
   , keyLB
-  , keyX
-  , keyP
+  , keyE
+  , keyR
   , keyF1
   , keyF2
   , keyF3
