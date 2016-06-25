@@ -10,10 +10,17 @@ module Data.Pmevm
   , cpuStep
   , Computer
   , initComputer
+  , hl
   , getPort
   , setPort
   , getMemory
   , setMemory
+  , isCPUHalted
+  , areInterruptsEnabled
+  , getPC
+  , setPC
+  , getRegister
+  , getFlag
   ) where
 
 import Data.Pmevm.Native

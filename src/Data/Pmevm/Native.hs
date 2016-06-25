@@ -391,18 +391,6 @@ type Ports = Vector Word8
 initPorts :: Ports
 initPorts = V.replicate (fromIntegral (maxBound :: Word8) + 1) 0
 
-getPort :: Word8 -> Computer -> Word8
-getPort n (Computer o _ _) = fromMaybe 0 $ o !? fromIntegral n
-
-setPort :: Word8 -> Word8 -> Computer -> Computer
-setPort n a (Computer o m p) = Computer (o // [(fromIntegral n, a)]) m p
-
-getMemory :: Word16 -> Computer -> Word8
-getMemory addr (Computer _ m _) = fromMaybe 0 $ m !? fromIntegral addr
-
-setMemory :: Word16 -> Word8 -> Computer -> Computer
-setMemory addr a (Computer o m p) = Computer o (m // [(fromIntegral addr, a)]) p
-
 data CPU = CPU
   { isHalted :: !Bool
   , interruptsEnabled :: !Bool
@@ -790,3 +778,36 @@ cpuStep (Computer o m p) =
   let op_code = fromMaybe 0 $ m !? (fromIntegral $ regPC p) in
   let op = cpuOperation op_code in
   executeOperation op (Computer o m p)
+
+hl :: Word8 -> Word8 -> Word16
+hl h l = (fromIntegral h `shift` 8) .|. fromIntegral l
+
+getPort :: Word8 -> Computer -> Word8
+getPort n (Computer o _ _) = fromMaybe 0 $ o !? fromIntegral n
+
+setPort :: Word8 -> Word8 -> Computer -> Computer
+setPort n a (Computer o m p) = Computer (o // [(fromIntegral n, a)]) m p
+
+getMemory :: Word16 -> Computer -> Word8
+getMemory addr (Computer _ m _) = fromMaybe 0 $ m !? fromIntegral addr
+
+setMemory :: Word16 -> Word8 -> Computer -> Computer
+setMemory addr a (Computer o m p) = Computer o (m // [(fromIntegral addr, a)]) p
+
+isCPUHalted :: Computer -> Bool
+isCPUHalted = isHalted . cpu
+
+areInterruptsEnabled :: Computer -> Bool
+areInterruptsEnabled = interruptsEnabled . cpu
+
+getPC :: Computer -> Word16
+getPC = regPC . cpu
+
+setPC :: Word16 -> Computer -> Computer
+setPC w c = c { cpu = (cpu c) { regPC = w } }
+
+getRegister :: CPURegister -> Computer -> Word8
+getRegister r c = getReg r (memory c) (cpu c)
+
+getFlag :: CPUCondition -> Computer -> Bool
+getFlag cond c = fitCondition cond (psw $ cpu c)

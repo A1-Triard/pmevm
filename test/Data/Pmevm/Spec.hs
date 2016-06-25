@@ -10,6 +10,9 @@ tests :: Test
 tests = TestList
   [ opCodesTest
   , TestCase simpleProgramStepByStepTest
+  , TestCase jccTest
+  , TestCase sumNumbersShortProgramStepByStepTest
+  , TestCase sumNumbersProgramStepByStepTest
   ]
 
 opCodesTest :: Test
@@ -21,9 +24,84 @@ opCodesCase op_code = do
 
 simpleProgramStepByStepTest :: Assertion
 simpleProgramStepByStepTest = do
-  let c0 = setMemory 2 2 $ setMemory 1 (operationCode $ OUT) $ setMemory 0 (operationCode $ INR R_A) $ initComputer
+  let c0 = setMemory 2 2 $ setMemory 1 (operationCode OUT) $ setMemory 0 (operationCode $ INR R_A) $ initComputer
   assertEqual "" 0 $ getPort 2 c0
   let c1 = cpuStep c0
   assertEqual "" 0 $ getPort 2 c1
   let c2 = cpuStep c1
   assertEqual "" 1 $ getPort 2 c2
+
+jccTest :: Assertion
+jccTest = do
+  let
+    c0 =
+      setPC (hl 0o014 0o000) $
+      setMemory (hl 0o014 0o000) (operationCode $ JCC C_NZ) $
+      setMemory (hl 0o014 0o001) 0o023 $
+      setMemory (hl 0o014 0o002) 0o014 $
+      initComputer
+  let c1 = cpuStep c0
+  assertEqual "" (hl 0o014 0o023) $ getPC c1
+
+sumNumbersShortProgramStepByStepTest :: Assertion
+sumNumbersShortProgramStepByStepTest = do
+  let c0 = setPC (hl 0o014 0o000) $ setProgram sumNumbersShortProgram initComputer
+  assertEqual "1" 0 $ getPort 0 c0
+  assertEqual "2" (hl 0o014 0o000) $ getPC c0
+  let c1 = cpuStep c0
+  assertEqual "3" (hl 0o014 0o002) $ getPC c1
+  let c2 = cpuStep c1
+  assertEqual "4" (hl 0o014 0o004) $ getPC c2
+  assertEqual "5" 0o002 $ getRegister R_D c2
+  let c3 = cpuStep c2
+  assertEqual "6" (hl 0o014 0o005) $ getPC c3
+  assertEqual "7" 0o002 $ getRegister R_A c3
+  let c4 = cpuStep c3
+  assertEqual "8" (hl 0o014 0o006) $ getPC c4
+  assertEqual "9" 0o001 $ getRegister R_D c4
+  assertEqual "10" True $ getFlag C_NZ c4
+  let c5 = cpuStep c4
+  assertEqual "11" (hl 0o014 0o004) $ getPC c5
+
+sumNumbersProgramStepByStepTest :: Assertion
+sumNumbersProgramStepByStepTest = do
+  let c0 = setPC (hl 0o014 0o000) $ setProgram sumNumbersProgram initComputer
+  assertEqual "" 0 $ getPort 0 c0
+  let c = take 100 $ iterate cpuStep c0
+  let ch = fromMaybe initComputer $ find isCPUHalted c
+  assertEqual "" 210 $ getPort 0 ch
+
+setProgram :: [(Word8, Word8, Word8)] -> Computer -> Computer
+setProgram program computer = foldl (\c (address_h, address_l, opcode) -> setMemory (hl address_h address_l) opcode c) computer program
+
+sumNumbersProgram :: [(Word8, Word8, Word8)]
+sumNumbersProgram =
+  [ (0o014, 0o000, 0o076) {-         MVI A 000Q        -}
+  , (0o014, 0o001, 0o000)
+  , (0o014, 0o002, 0o026) {-         MVI D 024Q        -}
+  , (0o014, 0o003, 0o024)
+  , (0o014, 0o004, 0o202) {- M1:     ADD D             -}
+  , (0o014, 0o005, 0o025) {-         DCR D             -}
+  , (0o014, 0o006, 0o302) {-         JNZ M1            -}
+  , (0o014, 0o007, 0o004)
+  , (0o014, 0o010, 0o014)
+  , (0o014, 0o011, 0o323) {-         OUT 000Q          -}
+  , (0o014, 0o012, 0o000)
+  , (0o014, 0o013, 0o166) {-         HLT               -}
+  ]
+
+sumNumbersShortProgram :: [(Word8, Word8, Word8)]
+sumNumbersShortProgram =
+  [ (0o014, 0o000, 0o076) {-         MVI A 000Q        -}
+  , (0o014, 0o001, 0o000)
+  , (0o014, 0o002, 0o026) {-         MVI D 002Q        -}
+  , (0o014, 0o003, 0o002)
+  , (0o014, 0o004, 0o202) {- M1:     ADD D             -}
+  , (0o014, 0o005, 0o025) {-         DCR D             -}
+  , (0o014, 0o006, 0o302) {-         JNZ M1            -}
+  , (0o014, 0o007, 0o004)
+  , (0o014, 0o010, 0o014)
+  , (0o014, 0o011, 0o323) {-         OUT 000Q          -}
+  , (0o014, 0o012, 0o000)
+  , (0o014, 0o013, 0o166) {-         HLT               -}
+  ]
