@@ -32,9 +32,9 @@ keyboardStep k c =
   let i1 = (i .&. 0x02) == 0 in
   let i2 = (i .&. 0x04) == 0 in
   let i3 = (i .&. 0x08) == 0 in
-  let o0 = if i0 && key3 k || i1 && key7 k || i2 && keyP k || i3 && keyF4 k then 0 else 1 in
-  let o1 = if i0 && key2 k || i1 && key6 k || i2 && keyX k || i3 && keyF3 k then 0 else 1 in
-  let o2 = if i0 && key1 k || i1 && key5 k || i2 && keyLB k || i3 && keyF2 k then 0 else 1 in
-  let o3 = if i0 && key0 k || i1 && key4 k || i2 && keyHB k || i3 && keyF1 k then 0 else 1 in
+  let o0 = if i0 && key3 k || i1 && key2 k || i2 && key1 k || i3 && key0 k then 0 else 1 in
+  let o1 = if i0 && key7 k || i1 && key6 k || i2 && key5 k || i3 && key4 k then 0 else 1 in
+  let o2 = if i0 && keyP k || i1 && keyX k || i2 && keyLB k || i3 && keyHB k then 0 else 1 in
+  let o3 = if i0 && keyF4 k || i1 && keyF3 k || i2 && keyF2 k || i3 && keyF1 k then 0 else 1 in
   let o = (o3 `shift` 3) .|. (o2 `shift` 2) .|. (o1 `shift` 1) .|. o0 in
   setPortIn 3 o c
