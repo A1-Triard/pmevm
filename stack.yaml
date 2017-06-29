@@ -15,7 +15,7 @@
 # resolver:
 #  name: custom-snapshot
 #  location: "./custom-snapshot.yaml"
-resolver: lts-6.4
+resolver: lts-8.21
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -46,10 +46,6 @@ flags: {}
 
 # Extra package databases containing global packages
 extra-package-dbs: []
-
-ghc-options:
-  pmevm-backend: -O2 -cpp -Iinclude -Wall -Werror -fno-warn-unused-imports -XTemplateHaskell -XViewPatterns -XMultiParamTypeClasses -XDeriveDataTypeable -XDeriveGeneric -XDeriveFoldable -XDeriveTraversable -XStandaloneDeriving -XUnicodeSyntax -XMagicHash -XDefaultSignatures -XNegativeLiterals -XPatternSynonyms -XParallelListComp -XTransformListComp -XMonadComprehensions -XUnboxedTuples -XLambdaCase -XEmptyCase -XEmptyDataDecls -XMultiWayIf -XTypeOperators -XTypeFamilies -XKindSignatures -XLiberalTypeSynonyms -XExistentialQuantification -XGADTs -XDeriveAnyClass -XFlexibleContexts -XFlexibleInstances -XOverloadedStrings -XDataKinds -XExplicitForAll -XBangPatterns
-  pmevm-backend-test: -O2 -cpp -Iinclude -Wall -Werror -fno-warn-unused-imports -XTemplateHaskell -XViewPatterns -XMultiParamTypeClasses -XDeriveDataTypeable -XDeriveGeneric -XDeriveFoldable -XDeriveTraversable -XStandaloneDeriving -XUnicodeSyntax -XMagicHash -XDefaultSignatures -XNegativeLiterals -XPatternSynonyms -XParallelListComp -XTransformListComp -XMonadComprehensions -XUnboxedTuples -XLambdaCase -XEmptyCase -XEmptyDataDecls -XMultiWayIf -XTypeOperators -XTypeFamilies -XKindSignatures -XLiberalTypeSynonyms -XExistentialQuantification -XGADTs -XDeriveAnyClass -XFlexibleContexts -XFlexibleInstances -XOverloadedStrings -XDataKinds -XExplicitForAll -XBangPatterns
 
 # Control whether we use the GHC we find on the path
 # system-ghc: true
