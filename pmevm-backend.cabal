@@ -69,6 +69,7 @@ test-suite pmevm-backend-test
   hs-source-dirs: test
   main-is: Spec.hs
   other-modules: Data.Pmevm.Spec
+               , Data.Pmevm.Keyboard.Spec
   build-depends: base
                , vector
                , HUnit
