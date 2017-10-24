@@ -1,6 +1,6 @@
 module Main where
 
-import Lib
+import qualified Pmevm.Gui
 
 main :: IO ()
-main = someFunc
+main = Pmevm.Gui.gmevm
