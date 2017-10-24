@@ -15,6 +15,7 @@
     <property name="icon_size">3</property>
   </object>
   <object class="GtkApplicationWindow">
+    <property name="name">applicationWindow</property>
     <property name="can_focus">False</property>
     <child>
       <object class="GtkBox">
@@ -47,6 +48,7 @@
                     <child>
                       <object class="GtkButton">
                         <property name="label" translatable="yes">0</property>
+                        <property name="name">k0</property>
                         <property name="width_request">40</property>
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
@@ -61,6 +63,7 @@
                     <child>
                       <object class="GtkButton">
                         <property name="label" translatable="yes">1</property>
+                        <property name="name">k1</property>
                         <property name="width_request">40</property>
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
@@ -75,6 +78,7 @@
                     <child>
                       <object class="GtkButton">
                         <property name="label" translatable="yes">2</property>
+                        <property name="name">k2</property>
                         <property name="width_request">40</property>
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
@@ -89,6 +93,7 @@
                     <child>
                       <object class="GtkButton">
                         <property name="label" translatable="yes">3</property>
+                        <property name="name">k3</property>
                         <property name="width_request">40</property>
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
@@ -103,6 +108,7 @@
                     <child>
                       <object class="GtkButton">
                         <property name="label" translatable="yes">4</property>
+                        <property name="name">k4</property>
                         <property name="width_request">40</property>
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
@@ -117,6 +123,7 @@
                     <child>
                       <object class="GtkButton">
                         <property name="label" translatable="yes">5</property>
+                        <property name="name">k5</property>
                         <property name="width_request">40</property>
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
@@ -131,6 +138,7 @@
                     <child>
                       <object class="GtkButton">
                         <property name="label" translatable="yes">6</property>
+                        <property name="name">k6</property>
                         <property name="width_request">40</property>
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
@@ -145,6 +153,7 @@
                     <child>
                       <object class="GtkButton">
                         <property name="label" translatable="yes">7</property>
+                        <property name="name">k7</property>
                         <property name="width_request">40</property>
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
@@ -159,6 +168,7 @@
                     <child>
                       <object class="GtkButton">
                         <property name="label" translatable="yes">HB</property>
+                        <property name="name">k8</property>
                         <property name="width_request">40</property>
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
@@ -173,6 +183,7 @@
                     <child>
                       <object class="GtkButton">
                         <property name="label" translatable="yes">LB</property>
+                        <property name="name">k9</property>
                         <property name="width_request">40</property>
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
@@ -187,6 +198,7 @@
                     <child>
                       <object class="GtkButton">
                         <property name="label" translatable="yes">E</property>
+                        <property name="name">k10</property>
                         <property name="width_request">40</property>
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
@@ -201,6 +213,7 @@
                     <child>
                       <object class="GtkButton">
                         <property name="label" translatable="yes">G</property>
+                        <property name="name">k11</property>
                         <property name="width_request">40</property>
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
@@ -214,6 +227,7 @@
                     </child>
                     <child>
                       <object class="GtkButton">
+                        <property name="name">k12</property>
                         <property name="width_request">40</property>
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
@@ -227,6 +241,7 @@
                     </child>
                     <child>
                       <object class="GtkButton">
+                        <property name="name">k13</property>
                         <property name="width_request">40</property>
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
@@ -240,6 +255,7 @@
                     </child>
                     <child>
                       <object class="GtkButton">
+                        <property name="name">k14</property>
                         <property name="width_request">40</property>
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
@@ -253,6 +269,7 @@
                     </child>
                     <child>
                       <object class="GtkButton">
+                        <property name="name">k15</property>
                         <property name="width_request">40</property>
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
@@ -281,6 +298,7 @@
                     <child>
                       <object class="GtkButton">
                         <property name="label" translatable="yes">Reset</property>
+                        <property name="name">reset</property>
                         <property name="width_request">120</property>
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
@@ -321,6 +339,7 @@
                             </child>
                             <child>
                               <object class="GtkSwitch">
+                                <property name="name">s-b-s</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
                                 <property name="margin_left">6</property>
@@ -348,6 +367,7 @@
                     <child>
                       <object class="GtkButton">
                         <property name="label" translatable="yes">MC</property>
+                        <property name="name">mc</property>
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
                         <property name="receives_default">True</property>
@@ -399,6 +419,7 @@
                 <property name="column_homogeneous">True</property>
                 <child>
                   <object class="GtkStack">
+                    <property name="name">port0_1</property>
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <child>
@@ -434,6 +455,7 @@
                 </child>
                 <child>
                   <object class="GtkStack">
+                    <property name="name">port0_0</property>
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <child>
@@ -469,6 +491,7 @@
                 </child>
                 <child>
                   <object class="GtkStack">
+                    <property name="name">port2_7</property>
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <child>
@@ -504,6 +527,7 @@
                 </child>
                 <child>
                   <object class="GtkStack">
+                    <property name="name">port2_6</property>
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <child>
@@ -539,6 +563,7 @@
                 </child>
                 <child>
                   <object class="GtkStack">
+                    <property name="name">port2_5</property>
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <child>
@@ -574,6 +599,7 @@
                 </child>
                 <child>
                   <object class="GtkStack">
+                    <property name="name">port2_4</property>
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <child>
@@ -609,6 +635,7 @@
                 </child>
                 <child>
                   <object class="GtkStack">
+                    <property name="name">port2_3</property>
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <child>
@@ -644,6 +671,7 @@
                 </child>
                 <child>
                   <object class="GtkStack">
+                    <property name="name">port2_2</property>
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <child>
@@ -679,6 +707,7 @@
                 </child>
                 <child>
                   <object class="GtkStack">
+                    <property name="name">port2_1</property>
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <child>
@@ -714,6 +743,7 @@
                 </child>
                 <child>
                   <object class="GtkStack">
+                    <property name="name">port2_0</property>
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <child>
@@ -749,6 +779,7 @@
                 </child>
                 <child>
                   <object class="GtkStack">
+                    <property name="name">port1_7</property>
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <child>
@@ -784,6 +815,7 @@
                 </child>
                 <child>
                   <object class="GtkStack">
+                    <property name="name">port1_6</property>
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <child>
@@ -819,6 +851,7 @@
                 </child>
                 <child>
                   <object class="GtkStack">
+                    <property name="name">port1_5</property>
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <child>
@@ -854,6 +887,7 @@
                 </child>
                 <child>
                   <object class="GtkStack">
+                    <property name="name">port1_4</property>
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <child>
@@ -889,6 +923,7 @@
                 </child>
                 <child>
                   <object class="GtkStack">
+                    <property name="name">port1_3</property>
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <child>
@@ -924,6 +959,7 @@
                 </child>
                 <child>
                   <object class="GtkStack">
+                    <property name="name">port1_2</property>
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <child>
@@ -959,6 +995,7 @@
                 </child>
                 <child>
                   <object class="GtkStack">
+                    <property name="name">port1_1</property>
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <child>
@@ -994,6 +1031,7 @@
                 </child>
                 <child>
                   <object class="GtkStack">
+                    <property name="name">port1_0</property>
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <child>
@@ -1029,6 +1067,7 @@
                 </child>
                 <child>
                   <object class="GtkStack">
+                    <property name="name">port0_7</property>
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <child>
@@ -1064,6 +1103,7 @@
                 </child>
                 <child>
                   <object class="GtkStack">
+                    <property name="name">port0_6</property>
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <child>
@@ -1099,6 +1139,7 @@
                 </child>
                 <child>
                   <object class="GtkStack">
+                    <property name="name">port0_5</property>
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <child>
@@ -1134,6 +1175,7 @@
                 </child>
                 <child>
                   <object class="GtkStack">
+                    <property name="name">port0_4</property>
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <child>
@@ -1169,6 +1211,7 @@
                 </child>
                 <child>
                   <object class="GtkStack">
+                    <property name="name">port0_3</property>
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <child>
@@ -1204,6 +1247,7 @@
                 </child>
                 <child>
                   <object class="GtkStack">
+                    <property name="name">port0_2</property>
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <child>

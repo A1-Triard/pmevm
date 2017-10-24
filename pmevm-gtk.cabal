@@ -12,11 +12,17 @@ category: Web
 build-type: Simple
 -- extra-source-files:
 cabal-version: >=1.10
+data-files: ui.glade
 
 library
   hs-source-dirs: src
   exposed-modules: Pmevm.Gui
+  other-modules: Paths_pmevm_gtk
   build-depends: base >= 4.7 && < 5
+               , gtk3
+               , text
+               , transformers
+               , vector
   default-extensions: BangPatterns
                     , CPP
                     , DataKinds
@@ -112,6 +118,10 @@ test-suite pmevm-gtk-test
   build-depends: base
                , HUnit
                , pmevm-gtk
+               , gtk3
+               , text
+               , transformers
+               , vector
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   default-extensions: BangPatterns
                     , CPP
