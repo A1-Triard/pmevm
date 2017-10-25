@@ -19,6 +19,7 @@ library
   exposed-modules: Pmevm.Gui
   other-modules: Paths_pmevm_gtk
   build-depends: base >= 4.7 && < 5
+               , pmevm-backend
                , gtk3
                , text
                , transformers
