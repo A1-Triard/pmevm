@@ -85,7 +85,7 @@ frame ui d = do
   updatePort 1 (uiPort1 ui) c
   updatePort 2 (uiPort2 ui) c
   let
-    (cn, ct :: Int64)
+    (cn, ct)
       = fromMaybe (error "frame_")
       $ listToMaybe
       $ dropWhile ((< ticks) . snd)
