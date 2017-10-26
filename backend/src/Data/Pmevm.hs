@@ -27,7 +27,6 @@ module Data.Pmevm
   , Computer
   , initComputer
   , hl
-  , getTicks
   , getPortIn
   , setPortIn
   , getPortOut

@@ -192,7 +192,7 @@ data CPUOperation
   | STA | LDA | SHLD | LHLD
   deriving (Eq, Ord)
 
-operationTicks :: CPUOperation -> PSW -> Int
+operationTicks :: CPUOperation -> PSW -> Int64
 operationTicks (INR R_M) _ = 10
 operationTicks (INR _) _ = 5
 operationTicks (DCR R_M) _ = 10
@@ -410,7 +410,6 @@ initPorts = V.replicate (fromIntegral (maxBound :: Word8) + 1) (0, 0)
 data CPU = CPU
   { isHalted :: !Bool
   , interruptsEnabled :: !Bool
-  , timer :: Int
   , psw :: !PSW
   , regA :: !Word8
   , regB :: !Word8
@@ -485,7 +484,7 @@ asHalted :: CPU -> Maybe CPU
 asHalted p = if isHalted p then Just p else Nothing
 
 initCPU :: CPU
-initCPU = CPU False True 0 (pswScan 0) 0 0 0 0 0 0 0 0 0
+initCPU = CPU False True (pswScan 0) 0 0 0 0 0 0 0 0 0
 
 data Computer = Computer { ports :: Ports, memory :: Memory, cpu :: CPU }
 
@@ -790,17 +789,14 @@ executeOperation (PUSH rs) (Computer o m p) =
 executeOperation (CALL _) c = executeCall c
 executeOperation (RST n) (Computer o m p) = Computer o m $ p { regPC = fromIntegral n * 8 }
 
-cpuStep :: Computer -> Computer
+cpuStep :: Computer -> (Computer, Int64)
 cpuStep (Computer o m p) =
   let op_code = fromMaybe 0 $ m !? (fromIntegral $ regPC p) in
   let op = cpuOperation op_code in
-  executeOperation op (Computer o m p { timer = timer p + operationTicks op (psw p) })
+  (executeOperation op (Computer o m p), operationTicks op (psw p))
 
 hl :: Word8 -> Word8 -> Word16
 hl h l = (fromIntegral h `shift` 8) .|. fromIntegral l
-
-getTicks :: Computer -> Int
-getTicks = timer . cpu
 
 getPortIn :: Word8 -> Computer -> Word8
 getPortIn n (Computer o _ _) = fst $ fromMaybe (0, 0) $ o !? fromIntegral n

@@ -54,14 +54,15 @@ fps = 50.0
 clockSpeedInMHz :: Int64
 clockSpeedInMHz = 1
 
-passedTicks :: TimeSpec -> IO (TimeSpec, Int)
+passedTicks :: TimeSpec -> IO (TimeSpec, Int64)
 passedTicks t0 = do
   t <- getTime Monotonic
-  return (t, fromIntegral $ clockSpeedInMHz * ((sec t - sec t0) * 1000000 + (nsec t - nsec t0) `div` 1000))
+  return (t, clockSpeedInMHz * ((sec t - sec t0) * 1000000 + (nsec t - nsec t0) `div` 1000))
 
 data UIData = UIData
   { _dComputer :: !Computer
   , _dStartTime :: !TimeSpec
+  , _dStartTicks :: !Int64
   }
 makeLenses ''UIData
 
@@ -72,6 +73,9 @@ updatePort n p c = do
      let s = fromMaybe (error "frame") $ p !? i
      K.set s [stackVisibleChildName := if testBit v i then "1" else "0"]
 
+cpuStep' :: (Computer, Int64) -> (Computer, Int64)
+cpuStep' (c, t) = let (cn, d) = cpuStep c in (cn, t + d)
+
 frame :: UI -> IORef UIData -> IO ()
 frame ui d = do
   dx <- readIORef d
@@ -80,8 +84,14 @@ frame ui d = do
   updatePort 0 (uiPort0 ui) c
   updatePort 1 (uiPort1 ui) c
   updatePort 2 (uiPort2 ui) c
-  let cn = foldr (.) id (replicate ticks (cpuStep $!)) c
-  modifyIORef' d $ set dComputer cn . set dStartTime t
+  let
+    (cn, ct :: Int64)
+      = fromMaybe (error "frame_")
+      $ listToMaybe
+      $ dropWhile (\x -> (snd x :: Int64) < (ticks :: Int64))
+      $ iterate cpuStep' (c, (view dStartTicks dx :: Int64))
+  --let cn = foldr (.) id (replicate ticks (cpuStep $!)) c
+  modifyIORef' d $ set dComputer cn . set dStartTime t . set dStartTicks ct
 
 gmevm :: IO ()
 gmevm = do
@@ -90,8 +100,7 @@ gmevm = do
   void $ on (uiWindow ui) deleteEvent $ tryEvent $ lift mainQuit
   let comp = setProgram monitor initComputer
   t <- getTime Monotonic
-  d <- newIORef $ UIData comp t
+  d <- newIORef $ UIData comp t 0
   _ <- timeoutAdd (frame ui d >> return True) $ round (1000.0 / fps)
-  --timeoutRemove x
   widgetShowAll (uiWindow ui)
   mainGUI
