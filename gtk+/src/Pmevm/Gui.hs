@@ -80,7 +80,7 @@ frame ui d = do
   updatePort 0 (uiPort0 ui) c
   updatePort 1 (uiPort1 ui) c
   updatePort 2 (uiPort2 ui) c
-  let cn = fromMaybe (error "frame_") $ listToMaybe $ drop (ticks `quot` 10000) $ iterate cpuStep c
+  let cn = foldr (.) id (replicate ticks (cpuStep $!)) c
   modifyIORef' d $ set dComputer cn . set dStartTime t
 
 gmevm :: IO ()
