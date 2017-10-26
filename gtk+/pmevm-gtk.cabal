@@ -20,7 +20,9 @@ library
   other-modules: Paths_pmevm_gtk
   build-depends: base >= 4.7 && < 5
                , pmevm-backend
+               , clock
                , gtk3
+               , lens
                , text
                , transformers
                , vector
@@ -119,7 +121,9 @@ test-suite pmevm-gtk-test
   build-depends: base
                , HUnit
                , pmevm-gtk
+               , clock
                , gtk3
+               , lens
                , text
                , transformers
                , vector

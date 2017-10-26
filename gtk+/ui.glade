@@ -421,8 +421,7 @@
                                 <property name="icon_size">6</property>
                               </object>
                               <packing>
-                                <property name="name">page0</property>
-                                <property name="title" translatable="yes">page0</property>
+                                <property name="name">0</property>
                               </packing>
                             </child>
                             <child>
@@ -433,8 +432,7 @@
                                 <property name="icon_size">6</property>
                               </object>
                               <packing>
-                                <property name="name">page1</property>
-                                <property name="title" translatable="yes">page1</property>
+                                <property name="name">1</property>
                                 <property name="position">1</property>
                               </packing>
                             </child>
@@ -456,8 +454,7 @@
                                 <property name="icon_size">6</property>
                               </object>
                               <packing>
-                                <property name="name">page0</property>
-                                <property name="title" translatable="yes">page0</property>
+                                <property name="name">0</property>
                               </packing>
                             </child>
                             <child>
@@ -468,8 +465,7 @@
                                 <property name="icon_size">6</property>
                               </object>
                               <packing>
-                                <property name="name">page1</property>
-                                <property name="title" translatable="yes">page1</property>
+                                <property name="name">1</property>
                                 <property name="position">1</property>
                               </packing>
                             </child>
@@ -491,8 +487,7 @@
                                 <property name="icon_size">6</property>
                               </object>
                               <packing>
-                                <property name="name">page0</property>
-                                <property name="title" translatable="yes">page0</property>
+                                <property name="name">0</property>
                               </packing>
                             </child>
                             <child>
@@ -503,8 +498,7 @@
                                 <property name="icon_size">6</property>
                               </object>
                               <packing>
-                                <property name="name">page1</property>
-                                <property name="title" translatable="yes">page1</property>
+                                <property name="name">1</property>
                                 <property name="position">1</property>
                               </packing>
                             </child>
@@ -526,8 +520,7 @@
                                 <property name="icon_size">6</property>
                               </object>
                               <packing>
-                                <property name="name">page0</property>
-                                <property name="title" translatable="yes">page0</property>
+                                <property name="name">0</property>
                               </packing>
                             </child>
                             <child>
@@ -538,8 +531,7 @@
                                 <property name="icon_size">6</property>
                               </object>
                               <packing>
-                                <property name="name">page1</property>
-                                <property name="title" translatable="yes">page1</property>
+                                <property name="name">1</property>
                                 <property name="position">1</property>
                               </packing>
                             </child>
@@ -561,8 +553,7 @@
                                 <property name="icon_size">6</property>
                               </object>
                               <packing>
-                                <property name="name">page0</property>
-                                <property name="title" translatable="yes">page0</property>
+                                <property name="name">0</property>
                               </packing>
                             </child>
                             <child>
@@ -573,8 +564,7 @@
                                 <property name="icon_size">6</property>
                               </object>
                               <packing>
-                                <property name="name">page1</property>
-                                <property name="title" translatable="yes">page1</property>
+                                <property name="name">1</property>
                                 <property name="position">1</property>
                               </packing>
                             </child>
@@ -596,8 +586,7 @@
                                 <property name="icon_size">6</property>
                               </object>
                               <packing>
-                                <property name="name">page0</property>
-                                <property name="title" translatable="yes">page0</property>
+                                <property name="name">0</property>
                               </packing>
                             </child>
                             <child>
@@ -608,8 +597,7 @@
                                 <property name="icon_size">6</property>
                               </object>
                               <packing>
-                                <property name="name">page1</property>
-                                <property name="title" translatable="yes">page1</property>
+                                <property name="name">1</property>
                                 <property name="position">1</property>
                               </packing>
                             </child>
@@ -631,8 +619,7 @@
                                 <property name="icon_size">6</property>
                               </object>
                               <packing>
-                                <property name="name">page0</property>
-                                <property name="title" translatable="yes">page0</property>
+                                <property name="name">0</property>
                               </packing>
                             </child>
                             <child>
@@ -643,8 +630,7 @@
                                 <property name="icon_size">6</property>
                               </object>
                               <packing>
-                                <property name="name">page1</property>
-                                <property name="title" translatable="yes">page1</property>
+                                <property name="name">1</property>
                                 <property name="position">1</property>
                               </packing>
                             </child>
@@ -666,8 +652,7 @@
                                 <property name="icon_size">6</property>
                               </object>
                               <packing>
-                                <property name="name">page0</property>
-                                <property name="title" translatable="yes">page0</property>
+                                <property name="name">0</property>
                               </packing>
                             </child>
                             <child>
@@ -678,8 +663,7 @@
                                 <property name="icon_size">6</property>
                               </object>
                               <packing>
-                                <property name="name">page1</property>
-                                <property name="title" translatable="yes">page1</property>
+                                <property name="name">1</property>
                                 <property name="position">1</property>
                               </packing>
                             </child>
@@ -701,8 +685,7 @@
                                 <property name="icon_size">6</property>
                               </object>
                               <packing>
-                                <property name="name">page0</property>
-                                <property name="title" translatable="yes">page0</property>
+                                <property name="name">0</property>
                               </packing>
                             </child>
                             <child>
@@ -713,8 +696,7 @@
                                 <property name="icon_size">6</property>
                               </object>
                               <packing>
-                                <property name="name">page1</property>
-                                <property name="title" translatable="yes">page1</property>
+                                <property name="name">1</property>
                                 <property name="position">1</property>
                               </packing>
                             </child>
@@ -736,8 +718,7 @@
                                 <property name="icon_size">6</property>
                               </object>
                               <packing>
-                                <property name="name">page0</property>
-                                <property name="title" translatable="yes">page0</property>
+                                <property name="name">0</property>
                               </packing>
                             </child>
                             <child>
@@ -748,8 +729,7 @@
                                 <property name="icon_size">6</property>
                               </object>
                               <packing>
-                                <property name="name">page1</property>
-                                <property name="title" translatable="yes">page1</property>
+                                <property name="name">1</property>
                                 <property name="position">1</property>
                               </packing>
                             </child>
@@ -771,8 +751,7 @@
                                 <property name="icon_size">6</property>
                               </object>
                               <packing>
-                                <property name="name">page0</property>
-                                <property name="title" translatable="yes">page0</property>
+                                <property name="name">0</property>
                               </packing>
                             </child>
                             <child>
@@ -783,8 +762,7 @@
                                 <property name="icon_size">6</property>
                               </object>
                               <packing>
-                                <property name="name">page1</property>
-                                <property name="title" translatable="yes">page1</property>
+                                <property name="name">1</property>
                                 <property name="position">1</property>
                               </packing>
                             </child>
@@ -806,8 +784,7 @@
                                 <property name="icon_size">6</property>
                               </object>
                               <packing>
-                                <property name="name">page0</property>
-                                <property name="title" translatable="yes">page0</property>
+                                <property name="name">0</property>
                               </packing>
                             </child>
                             <child>
@@ -818,8 +795,7 @@
                                 <property name="icon_size">6</property>
                               </object>
                               <packing>
-                                <property name="name">page1</property>
-                                <property name="title" translatable="yes">page1</property>
+                                <property name="name">1</property>
                                 <property name="position">1</property>
                               </packing>
                             </child>
@@ -841,8 +817,7 @@
                                 <property name="icon_size">6</property>
                               </object>
                               <packing>
-                                <property name="name">page0</property>
-                                <property name="title" translatable="yes">page0</property>
+                                <property name="name">0</property>
                               </packing>
                             </child>
                             <child>
@@ -853,8 +828,7 @@
                                 <property name="icon_size">6</property>
                               </object>
                               <packing>
-                                <property name="name">page1</property>
-                                <property name="title" translatable="yes">page1</property>
+                                <property name="name">1</property>
                                 <property name="position">1</property>
                               </packing>
                             </child>
@@ -876,8 +850,7 @@
                                 <property name="icon_size">6</property>
                               </object>
                               <packing>
-                                <property name="name">page0</property>
-                                <property name="title" translatable="yes">page0</property>
+                                <property name="name">0</property>
                               </packing>
                             </child>
                             <child>
@@ -888,8 +861,7 @@
                                 <property name="icon_size">6</property>
                               </object>
                               <packing>
-                                <property name="name">page1</property>
-                                <property name="title" translatable="yes">page1</property>
+                                <property name="name">1</property>
                                 <property name="position">1</property>
                               </packing>
                             </child>
@@ -911,8 +883,7 @@
                                 <property name="icon_size">6</property>
                               </object>
                               <packing>
-                                <property name="name">page0</property>
-                                <property name="title" translatable="yes">page0</property>
+                                <property name="name">0</property>
                               </packing>
                             </child>
                             <child>
@@ -923,8 +894,7 @@
                                 <property name="icon_size">6</property>
                               </object>
                               <packing>
-                                <property name="name">page1</property>
-                                <property name="title" translatable="yes">page1</property>
+                                <property name="name">1</property>
                                 <property name="position">1</property>
                               </packing>
                             </child>
@@ -946,8 +916,7 @@
                                 <property name="icon_size">6</property>
                               </object>
                               <packing>
-                                <property name="name">page0</property>
-                                <property name="title" translatable="yes">page0</property>
+                                <property name="name">0</property>
                               </packing>
                             </child>
                             <child>
@@ -958,8 +927,7 @@
                                 <property name="icon_size">6</property>
                               </object>
                               <packing>
-                                <property name="name">page1</property>
-                                <property name="title" translatable="yes">page1</property>
+                                <property name="name">1</property>
                                 <property name="position">1</property>
                               </packing>
                             </child>
@@ -981,8 +949,7 @@
                                 <property name="icon_size">6</property>
                               </object>
                               <packing>
-                                <property name="name">page0</property>
-                                <property name="title" translatable="yes">page0</property>
+                                <property name="name">0</property>
                               </packing>
                             </child>
                             <child>
@@ -993,8 +960,7 @@
                                 <property name="icon_size">6</property>
                               </object>
                               <packing>
-                                <property name="name">page1</property>
-                                <property name="title" translatable="yes">page1</property>
+                                <property name="name">1</property>
                                 <property name="position">1</property>
                               </packing>
                             </child>
@@ -1016,8 +982,7 @@
                                 <property name="icon_size">6</property>
                               </object>
                               <packing>
-                                <property name="name">page0</property>
-                                <property name="title" translatable="yes">page0</property>
+                                <property name="name">0</property>
                               </packing>
                             </child>
                             <child>
@@ -1028,8 +993,7 @@
                                 <property name="icon_size">6</property>
                               </object>
                               <packing>
-                                <property name="name">page1</property>
-                                <property name="title" translatable="yes">page1</property>
+                                <property name="name">1</property>
                                 <property name="position">1</property>
                               </packing>
                             </child>
@@ -1051,8 +1015,7 @@
                                 <property name="icon_size">6</property>
                               </object>
                               <packing>
-                                <property name="name">page0</property>
-                                <property name="title" translatable="yes">page0</property>
+                                <property name="name">0</property>
                               </packing>
                             </child>
                             <child>
@@ -1063,8 +1026,7 @@
                                 <property name="icon_size">6</property>
                               </object>
                               <packing>
-                                <property name="name">page1</property>
-                                <property name="title" translatable="yes">page1</property>
+                                <property name="name">1</property>
                                 <property name="position">1</property>
                               </packing>
                             </child>
@@ -1086,8 +1048,7 @@
                                 <property name="icon_size">6</property>
                               </object>
                               <packing>
-                                <property name="name">page0</property>
-                                <property name="title" translatable="yes">page0</property>
+                                <property name="name">0</property>
                               </packing>
                             </child>
                             <child>
@@ -1098,8 +1059,7 @@
                                 <property name="icon_size">6</property>
                               </object>
                               <packing>
-                                <property name="name">page1</property>
-                                <property name="title" translatable="yes">page1</property>
+                                <property name="name">1</property>
                                 <property name="position">1</property>
                               </packing>
                             </child>
@@ -1121,8 +1081,7 @@
                                 <property name="icon_size">6</property>
                               </object>
                               <packing>
-                                <property name="name">page0</property>
-                                <property name="title" translatable="yes">page0</property>
+                                <property name="name">0</property>
                               </packing>
                             </child>
                             <child>
@@ -1133,8 +1092,7 @@
                                 <property name="icon_size">6</property>
                               </object>
                               <packing>
-                                <property name="name">page1</property>
-                                <property name="title" translatable="yes">page1</property>
+                                <property name="name">1</property>
                                 <property name="position">1</property>
                               </packing>
                             </child>
@@ -1156,8 +1114,7 @@
                                 <property name="icon_size">6</property>
                               </object>
                               <packing>
-                                <property name="name">page0</property>
-                                <property name="title" translatable="yes">page0</property>
+                                <property name="name">0</property>
                               </packing>
                             </child>
                             <child>
@@ -1168,8 +1125,7 @@
                                 <property name="icon_size">6</property>
                               </object>
                               <packing>
-                                <property name="name">page1</property>
-                                <property name="title" translatable="yes">page1</property>
+                                <property name="name">1</property>
                                 <property name="position">1</property>
                               </packing>
                             </child>
@@ -1191,8 +1147,7 @@
                                 <property name="icon_size">6</property>
                               </object>
                               <packing>
-                                <property name="name">page0</property>
-                                <property name="title" translatable="yes">page0</property>
+                                <property name="name">0</property>
                               </packing>
                             </child>
                             <child>
@@ -1203,8 +1158,7 @@
                                 <property name="icon_size">6</property>
                               </object>
                               <packing>
-                                <property name="name">page1</property>
-                                <property name="title" translatable="yes">page1</property>
+                                <property name="name">1</property>
                                 <property name="position">1</property>
                               </packing>
                             </child>
@@ -1226,8 +1180,7 @@
                                 <property name="icon_size">6</property>
                               </object>
                               <packing>
-                                <property name="name">page0</property>
-                                <property name="title" translatable="yes">page0</property>
+                                <property name="name">0</property>
                               </packing>
                             </child>
                             <child>
@@ -1238,8 +1191,7 @@
                                 <property name="icon_size">6</property>
                               </object>
                               <packing>
-                                <property name="name">page1</property>
-                                <property name="title" translatable="yes">page1</property>
+                                <property name="name">1</property>
                                 <property name="position">1</property>
                               </packing>
                             </child>

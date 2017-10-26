@@ -20,12 +20,14 @@ module Pmevm.Gui
 
 #include <haskell>
 import Paths_pmevm_gtk
+import Data.Pmevm
+import Data.Pmevm.Monitor
 
 data UI = UI
   { uiWindow :: !Window
---  , uiPort0 :: !(Vector Stack)
---  , uiPort1 :: !(Vector Stack)
---  , uiPort2 :: !(Vector Stack)
+  , uiPort0 :: !(Vector Stack)
+  , uiPort1 :: !(Vector Stack)
+  , uiPort2 :: !(Vector Stack)
 --  , uiKeyboard :: !(Vector Button)
 --  , uiReset :: !Button
 --  , uiMC :: !Button
@@ -37,19 +39,59 @@ buildUI file = do
   b <- builderNew
   builderAddFromFile b file
   window <- builderGetObject b castToWindow ("applicationWindow" :: S.Text)
---  port0 <- V.generateM 8 $ \i -> builderGetObject b castToStack ("port0_" <> ST.pack (show i))
---  port1 <- V.generateM 8 $ \i -> builderGetObject b castToStack ("port1_" <> ST.pack (show i))
---  port2 <- V.generateM 8 $ \i -> builderGetObject b castToStack ("port2_" <> ST.pack (show i))
+  port0 <- V.generateM 8 $ \i -> builderGetObject b castToStack ("port0_" <> ST.pack (show i))
+  port1 <- V.generateM 8 $ \i -> builderGetObject b castToStack ("port1_" <> ST.pack (show i))
+  port2 <- V.generateM 8 $ \i -> builderGetObject b castToStack ("port2_" <> ST.pack (show i))
 --  keys <- V.generateM 16 $ \i -> builderGetObject b castToButton ("k" <> ST.pack (show i))
 --  reset <- builderGetObject b castToButton ("reset" :: S.Text)
 --  mc <- builderGetObject b castToButton ("mc" :: S.Text)
 --  sbs <- builderGetObject b castToSwitch ("s-b-s" :: S.Text)
-  return $ UI window --port0 port1 port2 keys reset mc -- sbs
+  return $ UI window port0 port1 port2-- keys reset mc -- sbs
+
+fps :: Double
+fps = 50.0
+
+clockSpeedInMHz :: Int64
+clockSpeedInMHz = 1
+
+passedTicks :: TimeSpec -> IO (TimeSpec, Int)
+passedTicks t0 = do
+  t <- getTime Monotonic
+  return (t, fromIntegral $ clockSpeedInMHz * ((sec t - sec t0) * 1000000 + (nsec t - nsec t0) `div` 1000))
+
+data UIData = UIData
+  { _dComputer :: !Computer
+  , _dStartTime :: !TimeSpec
+  }
+makeLenses ''UIData
+
+updatePort :: Word8 -> Vector Stack -> Computer -> IO ()
+updatePort n p c = do
+  let v = getPortOut n c
+  forM_ [0 .. 7] $ \i -> do
+     let s = fromMaybe (error "frame") $ p !? i
+     K.set s [stackVisibleChildName := if testBit v i then "1" else "0"]
+
+frame :: UI -> IORef UIData -> IO ()
+frame ui d = do
+  dx <- readIORef d
+  (t, ticks) <- passedTicks $ view dStartTime dx
+  let c = view dComputer dx
+  updatePort 0 (uiPort0 ui) c
+  updatePort 1 (uiPort1 ui) c
+  updatePort 2 (uiPort2 ui) c
+  let cn = fromMaybe (error "frame_") $ listToMaybe $ drop (ticks `quot` 10000) $ iterate cpuStep c
+  modifyIORef' d $ set dComputer cn . set dStartTime t
 
 gmevm :: IO ()
 gmevm = do
   void initGUI
   ui <- buildUI =<< getDataFileName "ui.glade"
   void $ on (uiWindow ui) deleteEvent $ tryEvent $ lift mainQuit
+  let comp = setProgram monitor initComputer
+  t <- getTime Monotonic
+  d <- newIORef $ UIData comp t
+  _ <- timeoutAdd (frame ui d >> return True) $ round (1000.0 / fps)
+  --timeoutRemove x
   widgetShowAll (uiWindow ui)
   mainGUI
