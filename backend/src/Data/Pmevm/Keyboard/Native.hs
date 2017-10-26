@@ -20,26 +20,46 @@ module Data.Pmevm.Keyboard.Native where
 import Data.Pmevm
 
 data Keyboard = Keyboard
-  { key0 :: Bool
-  , key1 :: Bool
-  , key2 :: Bool
-  , key3 :: Bool
-  , key4 :: Bool
-  , key5 :: Bool
-  , key6 :: Bool
-  , key7 :: Bool
-  , keyHB :: Bool
-  , keyLB :: Bool
-  , keyE :: Bool
-  , keyR :: Bool
-  , keyF1 :: Bool
-  , keyF2 :: Bool
-  , keyF3 :: Bool
-  , keyF4 :: Bool
+  { _key0 :: Bool
+  , _key1 :: Bool
+  , _key2 :: Bool
+  , _key3 :: Bool
+  , _key4 :: Bool
+  , _key5 :: Bool
+  , _key6 :: Bool
+  , _key7 :: Bool
+  , _key8 :: Bool
+  , _key9 :: Bool
+  , _keyA :: Bool
+  , _keyB :: Bool
+  , _keyC :: Bool
+  , _keyD :: Bool
+  , _keyE :: Bool
+  , _keyF :: Bool
   }
+makeLenses ''Keyboard
 
 initKeyboard :: Keyboard
 initKeyboard = Keyboard False False False False False False False False False False False False False False False False
+
+key :: Int -> Lens' Keyboard Bool
+key 0 = key0
+key 1 = key1
+key 2 = key2
+key 3 = key3
+key 4 = key4
+key 5 = key5
+key 6 = key6
+key 7 = key7
+key 8 = key8
+key 9 = key9
+key 10 = keyA
+key 11 = keyB
+key 12 = keyC
+key 13 = keyD
+key 14 = keyE
+key 15 = keyF
+key _ = error "key"
 
 keyboardStep :: Keyboard -> Computer -> Computer
 keyboardStep k c =
@@ -48,9 +68,9 @@ keyboardStep k c =
   let i1 = (i .&. 0x02) == 0 in
   let i2 = (i .&. 0x04) == 0 in
   let i3 = (i .&. 0x08) == 0 in
-  let o0 = if i0 && key3 k || i1 && key2 k || i2 && key1 k || i3 && key0 k then 0 else 1 in
-  let o1 = if i0 && key7 k || i1 && key6 k || i2 && key5 k || i3 && key4 k then 0 else 1 in
-  let o2 = if i0 && keyR k || i1 && keyE k || i2 && keyLB k || i3 && keyHB k then 0 else 1 in
-  let o3 = if i0 && keyF4 k || i1 && keyF3 k || i2 && keyF2 k || i3 && keyF1 k then 0 else 1 in
+  let o0 = if i0 && view key3 k || i1 && view key2 k || i2 && view key1 k || i3 && view key0 k then 0 else 1 in
+  let o1 = if i0 && view key7 k || i1 && view key6 k || i2 && view key5 k || i3 && view key4 k then 0 else 1 in
+  let o2 = if i0 && view keyB k || i1 && view keyA k || i2 && view key9 k || i3 && view key8 k then 0 else 1 in
+  let o3 = if i0 && view keyF k || i1 && view keyE k || i2 && view keyD k || i3 && view keyC k then 0 else 1 in
   let o = (o3 `shift` 3) .|. (o2 `shift` 2) .|. (o1 `shift` 1) .|. o0 in
   setPortIn 3 o c

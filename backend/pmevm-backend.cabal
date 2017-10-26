@@ -22,6 +22,7 @@ library
                  , Data.Pmevm.Keyboard
                  , Data.Pmevm.Keyboard.Native
   build-depends: base >= 4.7 && < 5
+               , lens
                , vector
   default-extensions: CPP
                     , TemplateHaskell
@@ -71,9 +72,10 @@ test-suite pmevm-backend-test
   other-modules: Data.Pmevm.Spec
                , Data.Pmevm.Keyboard.Spec
   build-depends: base
-               , vector
                , HUnit
                , pmevm-backend
+               , lens
+               , vector
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   default-extensions: CPP
                     , TemplateHaskell

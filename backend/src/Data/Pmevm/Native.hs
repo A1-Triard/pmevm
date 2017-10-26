@@ -792,8 +792,8 @@ executeOperation (RST n) (Computer o m p) = Computer o m $ p { regPC = fromInteg
 cpuStep :: Computer -> (Computer, Int64)
 cpuStep (Computer o m p) =
   let op_code = fromMaybe 0 $ m !? (fromIntegral $ regPC p) in
-  let op = cpuOperation op_code in
-  (executeOperation op (Computer o m p), operationTicks op (psw p))
+  let operation = cpuOperation op_code in
+  (executeOperation operation (Computer o m p), operationTicks operation (psw p))
 
 hl :: Word8 -> Word8 -> Word16
 hl h l = (fromIntegral h `shift` 8) .|. fromIntegral l

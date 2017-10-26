@@ -24,15 +24,16 @@ module Data.Pmevm.Keyboard
   , key5
   , key6
   , key7
-  , keyHB
-  , keyLB
+  , key8
+  , key9
+  , keyA
+  , keyB
+  , keyC
+  , keyD
   , keyE
-  , keyR
-  , keyF1
-  , keyF2
-  , keyF3
-  , keyF4
+  , keyF
   , initKeyboard
+  , key
   , keyboardStep
   ) where
 

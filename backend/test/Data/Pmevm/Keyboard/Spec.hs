@@ -34,14 +34,19 @@ freeKeyboardTest :: Assertion
 freeKeyboardTest = do
   assertEqual "" 15 $ getPortIn 3 $ keyboardStep initKeyboard $ setPortOut 3 0 $ initComputer
 
-wait :: Int -> Keyboard -> Computer -> Computer
-wait n k c = fromMaybe (error "") $ find (\x -> getTicks x >= getTicks c + n) $ iterate (keyboardStep k . cpuStep) c
+computerStep :: Keyboard -> (Computer, Int64) -> (Computer, Int64)
+computerStep k (c, t) =
+  let (cn, d) = cpuStep c in
+  (keyboardStep k cn, t + d)
+
+wait :: Int64 -> Keyboard -> Computer -> Computer
+wait n k c = fst $ fromMaybe (error "") $ find ((>= n) . snd) $ iterate (computerStep k) (c, 0)
 
 sklTest :: Assertion
 sklTest = do
   let k0 = initKeyboard
-  let k1 = initKeyboard { key2 = True }
-  let k2 = initKeyboard { keyHB = True }
+  let k1 = set key2 True initKeyboard
+  let k2 = set key8 True initKeyboard
   let c0 = setPC (hl 0o014 0o000) $ setProgram testProgram $ setProgram monitor initComputer
   let c1 = wait 100000 k0 c0
   assertEqual "" 0 $ getPortOut 1 c1
