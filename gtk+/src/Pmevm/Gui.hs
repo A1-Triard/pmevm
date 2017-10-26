@@ -88,9 +88,8 @@ frame ui d = do
     (cn, ct :: Int64)
       = fromMaybe (error "frame_")
       $ listToMaybe
-      $ dropWhile (\x -> (snd x :: Int64) < (ticks :: Int64))
+      $ dropWhile ((< ticks) . snd)
       $ iterate cpuStep' (c, (view dStartTicks dx :: Int64))
-  --let cn = foldr (.) id (replicate ticks (cpuStep $!)) c
   modifyIORef' d $ set dComputer cn . set dStartTime t . set dStartTicks ct
 
 gmevm :: IO ()
