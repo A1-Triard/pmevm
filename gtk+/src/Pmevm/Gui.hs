@@ -90,7 +90,7 @@ frame ui d = do
       $ listToMaybe
       $ dropWhile ((< ticks) . snd)
       $ iterate cpuStep' (c, (view dStartTicks dx :: Int64))
-  modifyIORef' d $ set dComputer cn . set dStartTime t . set dStartTicks ct
+  modifyIORef' d $ set dComputer cn . set dStartTime t . set dStartTicks (ct - ticks)
 
 gmevm :: IO ()
 gmevm = do
