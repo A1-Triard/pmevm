@@ -57,7 +57,7 @@
                             <property name="row_homogeneous">True</property>
                             <property name="column_homogeneous">True</property>
                             <child>
-                              <object class="GtkButton" id="k0">
+                              <object class="GtkToggleButton" id="k0">
                                 <property name="label" translatable="yes">0</property>
                                 <property name="width_request">40</property>
                                 <property name="visible">True</property>
@@ -71,7 +71,7 @@
                               </packing>
                             </child>
                             <child>
-                              <object class="GtkButton" id="k1">
+                              <object class="GtkToggleButton" id="k1">
                                 <property name="label" translatable="yes">1</property>
                                 <property name="width_request">40</property>
                                 <property name="visible">True</property>
@@ -85,7 +85,7 @@
                               </packing>
                             </child>
                             <child>
-                              <object class="GtkButton" id="k2">
+                              <object class="GtkToggleButton" id="k2">
                                 <property name="label" translatable="yes">2</property>
                                 <property name="width_request">40</property>
                                 <property name="visible">True</property>
@@ -99,7 +99,7 @@
                               </packing>
                             </child>
                             <child>
-                              <object class="GtkButton" id="k3">
+                              <object class="GtkToggleButton" id="k3">
                                 <property name="label" translatable="yes">3</property>
                                 <property name="width_request">40</property>
                                 <property name="visible">True</property>
@@ -113,7 +113,7 @@
                               </packing>
                             </child>
                             <child>
-                              <object class="GtkButton" id="k4">
+                              <object class="GtkToggleButton" id="k4">
                                 <property name="label" translatable="yes">4</property>
                                 <property name="width_request">40</property>
                                 <property name="visible">True</property>
@@ -127,7 +127,7 @@
                               </packing>
                             </child>
                             <child>
-                              <object class="GtkButton" id="k5">
+                              <object class="GtkToggleButton" id="k5">
                                 <property name="label" translatable="yes">5</property>
                                 <property name="width_request">40</property>
                                 <property name="visible">True</property>
@@ -141,7 +141,7 @@
                               </packing>
                             </child>
                             <child>
-                              <object class="GtkButton" id="k6">
+                              <object class="GtkToggleButton" id="k6">
                                 <property name="label" translatable="yes">6</property>
                                 <property name="width_request">40</property>
                                 <property name="visible">True</property>
@@ -155,7 +155,7 @@
                               </packing>
                             </child>
                             <child>
-                              <object class="GtkButton" id="k7">
+                              <object class="GtkToggleButton" id="k7">
                                 <property name="label" translatable="yes">7</property>
                                 <property name="width_request">40</property>
                                 <property name="visible">True</property>
@@ -169,7 +169,7 @@
                               </packing>
                             </child>
                             <child>
-                              <object class="GtkButton" id="k8">
+                              <object class="GtkToggleButton" id="k8">
                                 <property name="label" translatable="yes">HB</property>
                                 <property name="width_request">40</property>
                                 <property name="visible">True</property>
@@ -183,7 +183,7 @@
                               </packing>
                             </child>
                             <child>
-                              <object class="GtkButton" id="k9">
+                              <object class="GtkToggleButton" id="k9">
                                 <property name="label" translatable="yes">LB</property>
                                 <property name="width_request">40</property>
                                 <property name="visible">True</property>
@@ -197,7 +197,7 @@
                               </packing>
                             </child>
                             <child>
-                              <object class="GtkButton" id="k10">
+                              <object class="GtkToggleButton" id="k10">
                                 <property name="label" translatable="yes">E</property>
                                 <property name="width_request">40</property>
                                 <property name="visible">True</property>
@@ -211,7 +211,7 @@
                               </packing>
                             </child>
                             <child>
-                              <object class="GtkButton" id="k11">
+                              <object class="GtkToggleButton" id="k11">
                                 <property name="label" translatable="yes">G</property>
                                 <property name="width_request">40</property>
                                 <property name="visible">True</property>
@@ -225,7 +225,8 @@
                               </packing>
                             </child>
                             <child>
-                              <object class="GtkButton" id="k12">
+                              <object class="GtkToggleButton" id="k12">
+                                <property name="label" translatable="yes">F1</property>
                                 <property name="width_request">40</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
@@ -238,7 +239,8 @@
                               </packing>
                             </child>
                             <child>
-                              <object class="GtkButton" id="k13">
+                              <object class="GtkToggleButton" id="k13">
+                                <property name="label" translatable="yes">F2</property>
                                 <property name="width_request">40</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
@@ -251,7 +253,8 @@
                               </packing>
                             </child>
                             <child>
-                              <object class="GtkButton" id="k14">
+                              <object class="GtkToggleButton" id="k14">
+                                <property name="label" translatable="yes">F3</property>
                                 <property name="width_request">40</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
@@ -264,7 +267,8 @@
                               </packing>
                             </child>
                             <child>
-                              <object class="GtkButton" id="k15">
+                              <object class="GtkToggleButton" id="k15">
+                                <property name="label" translatable="yes">F4</property>
                                 <property name="width_request">40</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
