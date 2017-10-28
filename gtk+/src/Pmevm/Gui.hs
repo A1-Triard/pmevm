@@ -77,24 +77,31 @@ updatePort n p c = do
      let s = fromMaybe (error "frame") $ p !? i
      K.set s [stackVisibleChildName := if testBit v i then "1" else "0"]
 
-computerStep :: Keyboard -> (Computer, Int64) -> (Computer, Int64)
-computerStep k (c, t) = let (cn, d) = cpuStep c in (keyboardStep k cn, t + d)
+data ComputerState = ComputerState !Computer !Int64
+sTicks :: ComputerState -> Int64
+sTicks (ComputerState _ t) = t
+
+computerStep :: Keyboard -> ComputerState -> ComputerState
+computerStep k (ComputerState c t) =
+  let (cn, d) = cpuStep  c in
+  ComputerState (let x = keyboardStep k cn in x `seq` x) (t + d)
 
 frame :: UI -> IORef UIData -> IO ()
 frame ui d = do
   dx <- readIORef d
-  (t, ticks) <- passedTicks $ view dStartTime dx
+  (t, ticks2) <- passedTicks $ view dStartTime dx
+  let ticks = ticks2 `quot` 100
   let c = view dComputer dx
   updatePort 0 (uiPort0 ui) c
   updatePort 1 (uiPort1 ui) c
   updatePort 2 (uiPort2 ui) c
   keyboard <- uiKeyboard ui
   let
-    (cn, ct)
+    ComputerState cn ct
       = fromMaybe (error "frame_")
       $ listToMaybe
-      $ dropWhile ((< ticks) . snd)
-      $ iterate (computerStep keyboard) (c, view dStartTicks dx)
+      $ dropWhile ((< ticks) . sTicks)
+      $ iterate (computerStep keyboard) $ ComputerState c (view dStartTicks dx)
   modifyIORef' d $ set dComputer cn . set dStartTime t . set dStartTicks (ct - ticks)
 
 gmevm :: IO ()
