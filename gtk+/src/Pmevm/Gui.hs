@@ -72,7 +72,7 @@ makeLenses ''UIData
 
 updatePort :: Word8 -> Vector Stack -> Computer -> IO ()
 updatePort n p c = do
-  let v = getPortOut n c
+  let v = getPort n c
   forM_ [0 .. 7] $ \i -> do
      let s = fromMaybe (error "frame") $ p !? i
      K.set s [stackVisibleChildName := if testBit v i then "1" else "0"]

@@ -63,7 +63,7 @@ key _ = error "key"
 
 keyboardStep :: Keyboard -> Computer -> Computer
 keyboardStep k c =
-  let i = getPortOut 3 c in
+  let i = getPort 3 c in
   let i0 = (i .&. 0x01) == 0 in
   let i1 = (i .&. 0x02) == 0 in
   let i2 = (i .&. 0x04) == 0 in
@@ -72,5 +72,5 @@ keyboardStep k c =
   let o1 = if i0 && view key7 k || i1 && view key6 k || i2 && view key5 k || i3 && view key4 k then 0 else 1 in
   let o2 = if i0 && view keyB k || i1 && view keyA k || i2 && view key9 k || i3 && view key8 k then 0 else 1 in
   let o3 = if i0 && view keyF k || i1 && view keyE k || i2 && view keyD k || i3 && view keyC k then 0 else 1 in
-  let o = (o3 `shift` 3) .|. (o2 `shift` 2) .|. (o1 `shift` 1) .|. o0 in
-  setPortIn 3 o c
+  let o =  (o3 `shift` 7) .|. (o2 `shift` 6) .|. (o1 `shift` 5) .|. (o0 `shift` 4) .|. (i .&. 0x0F) in
+  setPort 3 o c

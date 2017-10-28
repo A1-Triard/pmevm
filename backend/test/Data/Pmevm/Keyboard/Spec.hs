@@ -32,7 +32,7 @@ tests = TestList
 
 freeKeyboardTest :: Assertion
 freeKeyboardTest = do
-  assertEqual "" 15 $ getPortIn 3 $ keyboardStep initKeyboard $ setPortOut 3 0 $ initComputer
+  assertEqual "" 240 $ getPort 3 $ keyboardStep initKeyboard $ setPort 3 0 $ initComputer
 
 computerStep :: Keyboard -> (Computer, Int64) -> (Computer, Int64)
 computerStep k (c, t) =
@@ -49,15 +49,15 @@ sklTest = do
   let k2 = set key8 True initKeyboard
   let c0 = setPC (hl 0o014 0o000) $ setProgram testProgram $ setProgram monitor initComputer
   let c1 = wait 100000 k0 c0
-  assertEqual "" 0 $ getPortOut 1 c1
+  assertEqual "" 240 $ getPort 3 c1
   let c2 = wait 100000 k1 c1
-  assertEqual "" 2 $ getPortOut 1 c2
+  assertEqual "" 224 $ getPort 3 c2
   let c3 = wait 100000 k0 c2
-  assertEqual "" 2 $ getPortOut 1 c3
+  assertEqual "" 240 $ getPort 3 c3
   let c4 = wait 100000 k2 c3
-  assertEqual "" 8 $ getPortOut 1 c4
+  assertEqual "" 176 $ getPort 3 c4
   let c5 = wait 100000 k0 c4
-  assertEqual "" 8 $ getPortOut 1 c5
+  assertEqual "" 240 $ getPort 3 c5
 
 testProgram :: Program
 testProgram = Program
@@ -69,8 +69,8 @@ testProgram = Program
   , (0o014, 0o005, 0o312, "          JZ START          ")
   , (0o014, 0o006, 0o000, "                            ")
   , (0o014, 0o007, 0o014, "                            ")
-  , (0o014, 0o010, 0o323, "          OUT 001Q          ")
-  , (0o014, 0o011, 0o001, "                            ")
+  , (0o014, 0o010, 0o323, "          OUT 003Q          ")
+  , (0o014, 0o011, 0o003, "                            ")
   , (0o014, 0o012, 0o303, "          JMP START         ")
   , (0o014, 0o013, 0o000, "                            ")
   , (0o014, 0o014, 0o014, "                            ")
