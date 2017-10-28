@@ -53,7 +53,7 @@ uiKeyboard :: UI -> IO Keyboard
 uiKeyboard ui = V.ifoldM' (\k i b -> ($ k) <$> set (key i) <$> toggleButtonGetActive b) initKeyboard (uiKeys ui)
 
 fps :: Double
-fps = 5.0
+fps = 50.0
 
 clockSpeedInMHz :: Int64
 clockSpeedInMHz = 1
@@ -89,8 +89,7 @@ computerStep k (ComputerState c t) =
 frame :: UI -> IORef UIData -> IO ()
 frame ui d = do
   dx <- readIORef d
-  (t, ticks2) <- passedTicks $ view dStartTime dx
-  let ticks = ticks2 `quot` 100
+  (t, ticks) <- passedTicks $ view dStartTime dx
   let c = view dComputer dx
   updatePort 0 (uiPort0 ui) c
   updatePort 1 (uiPort1 ui) c

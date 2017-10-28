@@ -801,7 +801,11 @@ getPort :: Word8 -> Computer -> Word8
 getPort n (Computer o _ _) = fromMaybe (error "gpi") $ o !? fromIntegral n
 
 setPort :: Word8 -> Word8 -> Computer -> Computer
-setPort n a (Computer o m p) = Computer (o // [(fromIntegral n, a)]) m p
+setPort n a (Computer o m p) =
+  let current_value = getPort n (Computer o m p) in
+  if current_value == a
+    then Computer o m p
+    else Computer (o // [(fromIntegral n, a)]) m p
 
 getMemory :: Word16 -> Computer -> Word8
 getMemory addr (Computer _ m _) = fromMaybe 0 $ m !? fromIntegral addr
