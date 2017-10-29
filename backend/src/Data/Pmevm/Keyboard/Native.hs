@@ -62,12 +62,16 @@ key 15 = keyF
 key _ = error "key"
 
 data ComputerWithPorts = ComputerWithPorts
-  { computer :: !Computer
-  , port0 :: !Word8
-  , port1 :: !Word8
-  , port2 :: !Word8
-  , port3 :: !Word8
+  { _computer :: !Computer
+  , _port0 :: !Word8
+  , _port1 :: !Word8
+  , _port2 :: !Word8
+  , _port3 :: !Word8
   }
+makeLenses ''ComputerWithPorts
+
+initPorts :: Computer -> ComputerWithPorts
+initPorts c = ComputerWithPorts c 0 0 0 0
 
 keyboard :: Keyboard -> Word8 -> Word8
 keyboard k i =
@@ -83,10 +87,10 @@ keyboard k i =
 
 keyboardStep :: Keyboard -> ComputerWithPorts -> (ComputerWithPorts, Int64)
 keyboardStep k c =
-  let (cn, po, t) = cpuStep (\n -> if n == 3 then keyboard k (port3 c) else 0) (computer c) in
+  let (cn, po, t) = cpuStep (\n -> if n == 3 then keyboard k (view port3 c) else 0) (view computer c) in
   case po of
-    Just (PortOut 0 v) -> (c { computer = cn, port0 = v }, t)
-    Just (PortOut 1 v) -> (c { computer = cn, port1 = v }, t)
-    Just (PortOut 2 v) -> (c { computer = cn, port2 = v }, t)
-    Just (PortOut 3 v) -> (c { computer = cn, port3 = v }, t)
-    _ -> (c { computer = cn }, t)
+    Just (PortOut 0 v) -> (set computer cn $ set port0 v c, t)
+    Just (PortOut 1 v) -> (set computer cn $ set port1 v c, t)
+    Just (PortOut 2 v) -> (set computer cn $ set port2 v c, t)
+    Just (PortOut 3 v) -> (set computer cn $ set port3 v c, t)
+    _ -> (set computer cn c, t)

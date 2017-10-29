@@ -319,6 +319,7 @@
                                 <property name="receives_default">True</property>
                                 <property name="border_width">23</property>
                                 <property name="image">resetImage</property>
+                                <accelerator key="BackSpace" signal="activate"/>
                               </object>
                               <packing>
                                 <property name="expand">True</property>

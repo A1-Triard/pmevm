@@ -30,7 +30,7 @@ data UI = UI
   , uiPort1 :: !(Vector Stack)
   , uiPort2 :: !(Vector Stack)
   , uiKeys :: !(Vector ToggleButton)
---  , uiReset :: !Button
+  , uiReset :: !Button
 --  , uiMC :: !Button
 --  , uiSbs :: !Switch
   }
@@ -44,10 +44,10 @@ buildUI file = do
   p1 <- V.generateM 8 $ \i -> builderGetObject b castToStack ("port1_" <> ST.pack (show i))
   p2 <- V.generateM 8 $ \i -> builderGetObject b castToStack ("port2_" <> ST.pack (show i))
   keys <- V.generateM 16 $ \i -> builderGetObject b castToToggleButton ("k" <> ST.pack (show i))
---  reset <- builderGetObject b castToButton ("reset" :: S.Text)
+  r <- builderGetObject b castToButton ("reset" :: S.Text)
 --  mc <- builderGetObject b castToButton ("mc" :: S.Text)
 --  sbs <- builderGetObject b castToSwitch ("s-b-s" :: S.Text)
-  return $ UI window p0 p1 p2 keys-- reset mc -- sbs
+  return $ UI window p0 p1 p2 keys r-- mc sbs
 
 uiKeyboard :: UI -> IO Keyboard
 uiKeyboard ui = V.ifoldM' (\k i b -> ($ k) <$> set (key i) <$> toggleButtonGetActive b) initKeyboard (uiKeys ui)
@@ -90,9 +90,9 @@ frame ui d = do
   dx <- readIORef d
   (t, ticks) <- passedTicks $ view dStartTime dx
   let c = view dComputer dx
-  updatePort (uiPort0 ui) (port0 c)
-  updatePort (uiPort1 ui) (port1 c)
-  updatePort (uiPort2 ui) (port2 c)
+  updatePort (uiPort0 ui) (view port0 c)
+  updatePort (uiPort1 ui) (view port1 c)
+  updatePort (uiPort2 ui) (view port2 c)
   keyboard <- uiKeyboard ui
   let
     ComputerState cn ct
@@ -160,6 +160,9 @@ keyGestureRelease b d key_value = do
     _ -> mzero
   lift $ updateKey b d $ set kdGesture False
 
+resetCpu :: IORef UIData -> IO ()
+resetCpu d = modifyIORef' d $ over (dComputer . computer) $ setPC 0
+
 gmevm :: IO ()
 gmevm = do
   void initGUI
@@ -174,9 +177,10 @@ gmevm = do
     code :: Word32 <- (read . fromMaybe "0") <$> K.get k widgetName
     void $ on (uiWindow ui) keyPressEvent $ tryEvent $ keyGesturePress k kd code
     void $ on (uiWindow ui) keyReleaseEvent $ tryEvent $ keyGestureRelease k kd code
-  let comp = setProgram monitor initComputer
+  let comp = initPorts $ setProgram monitor initComputer
   t <- getTime Monotonic
-  d <- newIORef $ UIData (ComputerWithPorts comp 0 0 0 0) t 0
+  d <- newIORef $ UIData comp t 0
+  void $ on (uiReset ui) buttonActivated $ resetCpu d
   _ <- timeoutAdd (frame ui d >> return True) $ round (1000.0 / fps)
   widgetShowAll (uiWindow ui)
   mainGUI
