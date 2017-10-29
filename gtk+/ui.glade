@@ -59,6 +59,7 @@
                             <child>
                               <object class="GtkToggleButton" id="k0">
                                 <property name="label" translatable="yes">0</property>
+                                <property name="name">48</property>
                                 <property name="width_request">40</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
@@ -73,6 +74,7 @@
                             <child>
                               <object class="GtkToggleButton" id="k1">
                                 <property name="label" translatable="yes">1</property>
+                                <property name="name">49</property>
                                 <property name="width_request">40</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
@@ -87,6 +89,7 @@
                             <child>
                               <object class="GtkToggleButton" id="k2">
                                 <property name="label" translatable="yes">2</property>
+                                <property name="name">50</property>
                                 <property name="width_request">40</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
@@ -101,6 +104,7 @@
                             <child>
                               <object class="GtkToggleButton" id="k3">
                                 <property name="label" translatable="yes">3</property>
+                                <property name="name">51</property>
                                 <property name="width_request">40</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
@@ -115,6 +119,7 @@
                             <child>
                               <object class="GtkToggleButton" id="k4">
                                 <property name="label" translatable="yes">4</property>
+                                <property name="name">52</property>
                                 <property name="width_request">40</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
@@ -129,6 +134,7 @@
                             <child>
                               <object class="GtkToggleButton" id="k5">
                                 <property name="label" translatable="yes">5</property>
+                                <property name="name">53</property>
                                 <property name="width_request">40</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
@@ -143,6 +149,7 @@
                             <child>
                               <object class="GtkToggleButton" id="k6">
                                 <property name="label" translatable="yes">6</property>
+                                <property name="name">54</property>
                                 <property name="width_request">40</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
@@ -157,6 +164,7 @@
                             <child>
                               <object class="GtkToggleButton" id="k7">
                                 <property name="label" translatable="yes">7</property>
+                                <property name="name">55</property>
                                 <property name="width_request">40</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
@@ -171,6 +179,7 @@
                             <child>
                               <object class="GtkToggleButton" id="k8">
                                 <property name="label" translatable="yes">HB</property>
+                                <property name="name">104</property>
                                 <property name="width_request">40</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
@@ -185,6 +194,7 @@
                             <child>
                               <object class="GtkToggleButton" id="k9">
                                 <property name="label" translatable="yes">LB</property>
+                                <property name="name">108</property>
                                 <property name="width_request">40</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
@@ -199,6 +209,7 @@
                             <child>
                               <object class="GtkToggleButton" id="k10">
                                 <property name="label" translatable="yes">E</property>
+                                <property name="name">101</property>
                                 <property name="width_request">40</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
@@ -213,6 +224,7 @@
                             <child>
                               <object class="GtkToggleButton" id="k11">
                                 <property name="label" translatable="yes">G</property>
+                                <property name="name">103</property>
                                 <property name="width_request">40</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
@@ -227,6 +239,7 @@
                             <child>
                               <object class="GtkToggleButton" id="k12">
                                 <property name="label" translatable="yes">F1</property>
+                                <property name="name">65470</property>
                                 <property name="width_request">40</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
@@ -241,6 +254,7 @@
                             <child>
                               <object class="GtkToggleButton" id="k13">
                                 <property name="label" translatable="yes">F2</property>
+                                <property name="name">65471</property>
                                 <property name="width_request">40</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
@@ -255,6 +269,7 @@
                             <child>
                               <object class="GtkToggleButton" id="k14">
                                 <property name="label" translatable="yes">F3</property>
+                                <property name="name">65472</property>
                                 <property name="width_request">40</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
@@ -269,6 +284,7 @@
                             <child>
                               <object class="GtkToggleButton" id="k15">
                                 <property name="label" translatable="yes">F4</property>
+                                <property name="name">65473</property>
                                 <property name="width_request">40</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
