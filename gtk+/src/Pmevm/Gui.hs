@@ -102,39 +102,47 @@ frame ui d = do
       $ iterate (computerStep keyboard) $ ComputerState c (view dStartTicks dx)
   modifyIORef' d $ set dComputer cn . set dStartTime t . set dStartTicks (ct - ticks)
 
-buttonPress :: ToggleButton -> EventM EButton ()
-buttonPress b = do
-  LeftButton <- eventButton
-  lift $ toggleButtonSetActive b True
-
-buttonRelease :: ToggleButton -> EventM EButton ()
-buttonRelease b = do
-  LeftButton <- eventButton
-  lift $ toggleButtonSetActive b False
-
 enterKey :: Word32
 enterKey = 0xFF00 + 13
 
 spaceKey :: Word32
 spaceKey = 32
 
-keyPress :: ToggleButton -> EventM EKey ()
-keyPress b = do
-  k <- eventKeyVal
-  case k of
-    x | x == enterKey -> return ()
-    x | x == spaceKey -> return ()
-    _ -> mzero
-  lift $ toggleButtonSetActive b True
+data KeyData = KeyData { _kdButton :: !Bool, _kdEnter :: !Bool, _kdSpace :: !Bool }
+makeLenses ''KeyData
 
-keyRelease :: ToggleButton -> EventM EKey ()
-keyRelease b = do
+updateKey :: ToggleButton -> IORef KeyData -> (KeyData -> KeyData) -> IO ()
+updateKey b d t = do
+  modifyIORef' d t
+  toggleButtonSetActive b =<< (\x -> view kdButton x || view kdEnter x || view kdSpace x) <$> readIORef d
+
+buttonPress :: ToggleButton -> IORef KeyData -> EventM EButton ()
+buttonPress b d = do
+  LeftButton <- eventButton
+  lift $ updateKey b d $ set kdButton True
+
+buttonRelease :: ToggleButton -> IORef KeyData -> EventM EButton ()
+buttonRelease b d = do
+  LeftButton <- eventButton
+  lift $ updateKey b d $ set kdButton False
+
+keyPress :: ToggleButton -> IORef KeyData -> EventM EKey ()
+keyPress b d = do
   k <- eventKeyVal
-  case k of
-    x | x == enterKey -> return ()
-    x | x == spaceKey -> return ()
+  t <- case k of
+    x | x == enterKey -> return kdEnter
+    x | x == spaceKey -> return kdSpace
     _ -> mzero
-  lift $ toggleButtonSetActive b False
+  lift $ updateKey b d $ set t True
+
+keyRelease :: ToggleButton -> IORef KeyData -> EventM EKey ()
+keyRelease b d = do
+  k <- eventKeyVal
+  t <- case k of
+    x | x == enterKey -> return kdEnter
+    x | x == spaceKey -> return kdSpace
+    _ -> mzero
+  lift $ updateKey b d $ set t False
 
 gmevm :: IO ()
 gmevm = do
@@ -142,10 +150,11 @@ gmevm = do
   ui <- buildUI =<< getDataFileName "ui.glade"
   void $ on (uiWindow ui) deleteEvent $ tryEvent $ lift mainQuit
   V.forM_ (uiKeys ui) $ \k -> do
-    void $ on k buttonPressEvent $ tryEvent $ buttonPress k
-    void $ on k buttonReleaseEvent $ tryEvent $ buttonRelease k
-    void $ on k keyPressEvent $ tryEvent $ keyPress k
-    void $ on k keyReleaseEvent $ tryEvent $ keyRelease k
+    kd <- newIORef $ KeyData False False False
+    void $ on k buttonPressEvent $ tryEvent $ buttonPress k kd
+    void $ on k buttonReleaseEvent $ tryEvent $ buttonRelease k kd
+    void $ on k keyPressEvent $ tryEvent $ keyPress k kd
+    void $ on k keyReleaseEvent $ tryEvent $ keyRelease k kd
   let comp = setProgram monitor initComputer
   t <- getTime Monotonic
   d <- newIORef $ UIData (ComputerWithPorts comp 0 0 0 0) t 0
