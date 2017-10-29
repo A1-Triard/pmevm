@@ -102,11 +102,50 @@ frame ui d = do
       $ iterate (computerStep keyboard) $ ComputerState c (view dStartTicks dx)
   modifyIORef' d $ set dComputer cn . set dStartTime t . set dStartTicks (ct - ticks)
 
+buttonPress :: ToggleButton -> EventM EButton ()
+buttonPress b = do
+  LeftButton <- eventButton
+  lift $ toggleButtonSetActive b True
+
+buttonRelease :: ToggleButton -> EventM EButton ()
+buttonRelease b = do
+  LeftButton <- eventButton
+  lift $ toggleButtonSetActive b False
+
+enterKey :: Word32
+enterKey = 0xFF00 + 13
+
+spaceKey :: Word32
+spaceKey = 32
+
+keyPress :: ToggleButton -> EventM EKey ()
+keyPress b = do
+  k <- eventKeyVal
+  case k of
+    x | x == enterKey -> return ()
+    x | x == spaceKey -> return ()
+    _ -> mzero
+  lift $ toggleButtonSetActive b True
+
+keyRelease :: ToggleButton -> EventM EKey ()
+keyRelease b = do
+  k <- eventKeyVal
+  case k of
+    x | x == enterKey -> return ()
+    x | x == spaceKey -> return ()
+    _ -> mzero
+  lift $ toggleButtonSetActive b False
+
 gmevm :: IO ()
 gmevm = do
   void initGUI
   ui <- buildUI =<< getDataFileName "ui.glade"
   void $ on (uiWindow ui) deleteEvent $ tryEvent $ lift mainQuit
+  V.forM_ (uiKeys ui) $ \k -> do
+    void $ on k buttonPressEvent $ tryEvent $ buttonPress k
+    void $ on k buttonReleaseEvent $ tryEvent $ buttonRelease k
+    void $ on k keyPressEvent $ tryEvent $ keyPress k
+    void $ on k keyReleaseEvent $ tryEvent $ keyRelease k
   let comp = setProgram monitor initComputer
   t <- getTime Monotonic
   d <- newIORef $ UIData (ComputerWithPorts comp 0 0 0 0) t 0
