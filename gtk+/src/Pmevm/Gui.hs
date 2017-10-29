@@ -147,7 +147,7 @@ keyRelease b d = do
 keyGesturePress :: ToggleButton -> IORef KeyData -> Word32 -> EventM EKey ()
 keyGesturePress b d key_value = do
   k <- eventKeyVal
-  case (traceShow k k) of
+  case k of
     x | x == key_value -> return ()
     _ -> mzero
   lift $ updateKey b d $ set kdGesture True
