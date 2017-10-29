@@ -402,11 +402,6 @@ type Memory = Vector Word8
 initMemory :: Memory
 initMemory = V.replicate (fromIntegral (maxBound :: Word16) + 1) 0
 
-type Ports = Vector Word8
-
-initPorts :: Ports
-initPorts = V.replicate (fromIntegral (maxBound :: Word8) + 1) 0
-
 data CPU = CPU
   { isHalted :: !Bool
   , interruptsEnabled :: !Bool
@@ -433,14 +428,14 @@ getReg R_L = const regL
 getReg R_M = readMemory
 
 setReg :: CPURegister -> Word8 -> Computer -> Computer
-setReg R_A w (Computer o m p) = Computer o m $ p { regA = w }
-setReg R_B w (Computer o m p) = Computer o m $ p { regB = w }
-setReg R_C w (Computer o m p) = Computer o m $ p { regC = w }
-setReg R_D w (Computer o m p) = Computer o m $ p { regD = w }
-setReg R_E w (Computer o m p) = Computer o m $ p { regE = w }
-setReg R_H w (Computer o m p) = Computer o m $ p { regH = w }
-setReg R_L w (Computer o m p) = Computer o m $ p { regL = w }
-setReg R_M w (Computer o m p) = Computer o (writeMemory m p w) p
+setReg R_A w (Computer m p) = Computer m $ p { regA = w }
+setReg R_B w (Computer m p) = Computer m $ p { regB = w }
+setReg R_C w (Computer m p) = Computer m $ p { regC = w }
+setReg R_D w (Computer m p) = Computer m $ p { regD = w }
+setReg R_E w (Computer m p) = Computer m $ p { regE = w }
+setReg R_H w (Computer m p) = Computer m $ p { regH = w }
+setReg R_L w (Computer m p) = Computer m $ p { regL = w }
+setReg R_M w (Computer m p) = Computer (writeMemory m p w) p
 
 getRegPair :: CPURegisterPair -> CPU -> Word16
 getRegPair R_BC p = fromIntegral (regB p) * 256 + fromIntegral (regC p)
@@ -486,10 +481,10 @@ asHalted p = if isHalted p then Just p else Nothing
 initCPU :: CPU
 initCPU = CPU False True (pswScan 0) 0 0 0 0 0 0 0 0 0
 
-data Computer = Computer { ports :: Ports, memory :: Memory, cpu :: CPU }
+data Computer = Computer { memory :: Memory, cpu :: CPU }
 
 initComputer :: Computer
-initComputer = Computer initPorts initMemory initCPU
+initComputer = Computer initMemory initCPU
 
 loadByte :: Memory -> CPU -> Word8
 loadByte m p = fromMaybe 0 $ m !? (fromIntegral $ regPC p + 1)
@@ -501,61 +496,62 @@ loadWord m p =
   fromIntegral h * 256 + fromIntegral l
 
 executeReturn :: Computer -> Computer
-executeReturn (Computer o m p) =
+executeReturn (Computer m p) =
   let l = fromMaybe 0 $ m !? (fromIntegral $ regSP p) in
   let h = fromMaybe 0 $ m !? (fromIntegral $ regSP p + 1) in
-  Computer o m $ p { regPC = fromIntegral h * 256 + fromIntegral l, regSP = regSP p + 2 }
+  Computer m $ p { regPC = fromIntegral h * 256 + fromIntegral l, regSP = regSP p + 2 }
 
 executeJump :: Computer -> Computer
-executeJump (Computer o m p) =
+executeJump (Computer m p) =
   let addr = loadWord m p in
-  Computer o m $ p { regPC = addr }
+  Computer m $ p { regPC = addr }
 
 executeCall :: Computer -> Computer
-executeCall (Computer o m p) =
+executeCall (Computer m p) =
   let addr = loadWord m p in
   let ret_addr = regPC p + 3 in
   let ret_h = fromIntegral $ (ret_addr .&. 0xFF00) `shift` (-8) in
   let ret_l = fromIntegral $ ret_addr .&. 0x00FF in
   let m' = m // [(fromIntegral (regSP p - 1), ret_h), (fromIntegral (regSP p - 2), ret_l)] in
-  Computer o m' $ p { regSP = regSP p - 2, regPC = addr }
+  Computer m' $ p { regSP = regSP p - 2, regPC = addr }
 
-executeOperation :: CPUOperation -> Computer -> Computer
-executeOperation _ (Computer o m (asHalted -> Just p)) = Computer o m p
-executeOperation SHLD (Computer o m p) =
+executeOperation :: CPUOperation -> PortIn -> Computer -> (Computer, Maybe PortOut)
+executeOperation _ _ (Computer m (asHalted -> Just p)) =
+  (Computer m p, Nothing)
+executeOperation SHLD _ (Computer m p) =
   let addr = loadWord m p in
   let m' = m // [(fromIntegral addr, regL p), (fromIntegral (addr + 1), regH p)] in
-  Computer o m' $ p { regPC = regPC p + 3 }
-executeOperation LHLD (Computer o m p) =
+  (Computer m' $ p { regPC = regPC p + 3 }, Nothing)
+executeOperation LHLD _ (Computer m p) =
   let addr = loadWord m p in
   let l = fromMaybe 0 $ m !? (fromIntegral addr) in
   let h = fromMaybe 0 $ m !? (fromIntegral $ addr + 1) in
-  Computer o m $ p { regH = h, regL = l, regPC = regPC p + 3 }
-executeOperation STA (Computer o m p) =
+  (Computer m $ p { regH = h, regL = l, regPC = regPC p + 3 }, Nothing)
+executeOperation STA _ (Computer m p) =
   let addr = loadWord m p in
   let m' = m // [(fromIntegral addr, regA p)] in
-  Computer o m' $ p { regPC = regPC p + 3 }
-executeOperation LDA (Computer o m p) =
+  (Computer m' $ p { regPC = regPC p + 3 }, Nothing)
+executeOperation LDA _ (Computer m p) =
   let addr = loadWord m p in
   let a = fromMaybe 0 $ m !? (fromIntegral addr) in
-  Computer o m $ p { regA = a, regPC = regPC p + 3 }
-executeOperation RLC (Computer o m p) =
+  (Computer m $ p { regA = a, regPC = regPC p + 3 }, Nothing)
+executeOperation RLC _ (Computer m p) =
   let c = cpuFlag $ regA p .&. 0x80 `shift` (-7) in
   let a = regA p `rotate` 1 in
-  Computer o m $ p { regA = a, psw = (psw p) { fCarry = c }, regPC = regPC p + 1 }
-executeOperation RRC (Computer o m p) =
+  (Computer m $ p { regA = a, psw = (psw p) { fCarry = c }, regPC = regPC p + 1 }, Nothing)
+executeOperation RRC _ (Computer m p) =
   let c = cpuFlag $ regA p .&. 0x01 in
   let a = regA p `rotate` (-1) in
-  Computer o m $ p { regA = a, psw = (psw p) { fCarry = c }, regPC = regPC p + 1 }
-executeOperation RAL (Computer o m p) =
+  (Computer m $ p { regA = a, psw = (psw p) { fCarry = c }, regPC = regPC p + 1 }, Nothing)
+executeOperation RAL _ (Computer m p) =
   let c = cpuFlag $ regA p .&. 0x80 `shift` (-7) in
   let a = (regA p `shift` 1) .|. (flagCode $ fCarry $ psw p) in
-  Computer o m $ p { regA = a, psw = (psw p) { fCarry = c }, regPC = regPC p + 1 }
-executeOperation RAR (Computer o m p) =
+  (Computer m $ p { regA = a, psw = (psw p) { fCarry = c }, regPC = regPC p + 1 }, Nothing)
+executeOperation RAR _ (Computer m p) =
   let c = cpuFlag $ regA p .&. 0x01 in
   let a = (regA p `shift` (-1)) .|. ((flagCode $ fCarry $ psw p) `shift` 7) in
-  Computer o m $ p { regA = a, psw = (psw p) { fCarry = c }, regPC = regPC p + 1 }
-executeOperation DAA (Computer o m p) =
+  (Computer m $ p { regA = a, psw = (psw p) { fCarry = c }, regPC = regPC p + 1 }, Nothing)
+executeOperation DAA _ (Computer m p) =
   let ac' = fAuxCarry $ psw p in
   let c' = fCarry $ psw p in
   let l' = (if ac' then 0x10 else 0x00) .|. (regA p .&. 0x0F) in
@@ -568,250 +564,254 @@ executeOperation DAA (Computer o m p) =
   let h = if c then h' - 10 else h' in
   let a = (h `shift` 4) .|. l in
   let s = (pswUpdate (psw p) a) { fCarry = c, fAuxCarry = ac } in
-  Computer o m $ p { regA = a, psw = s, regPC = regPC p + 1 }
-executeOperation CMA (Computer o m p) = Computer o m $ p { regA = complement (regA p), regPC = regPC p + 1 }
-executeOperation STC (Computer o m p) = Computer o m $ p { psw = (psw p) { fCarry = True }, regPC = regPC p + 1 }
-executeOperation CMC (Computer o m p) = Computer o m $ p { psw = (psw p) { fCarry = not $ fCarry $ psw p }, regPC = regPC p + 1 }
-executeOperation RET c = executeReturn c
-executeOperation RET' c = executeReturn c
-executeOperation PCHL (Computer o m p) = Computer o m $ p { regPC = fromIntegral (regH p) * 256 + fromIntegral (regL p) }
-executeOperation SPHL (Computer o m p) = Computer o m $ p { regSP = fromIntegral (regH p) * 256 + fromIntegral (regL p), regPC = regPC p + 1 }
-executeOperation JMP c = executeJump c
-executeOperation JMP' c = executeJump c
-executeOperation OUT (Computer o m p) =
+  (Computer m $ p { regA = a, psw = s, regPC = regPC p + 1 }, Nothing)
+executeOperation CMA _ (Computer m p) =
+  (Computer m $ p { regA = complement (regA p), regPC = regPC p + 1 }, Nothing)
+executeOperation STC _ (Computer m p) =
+  (Computer m $ p { psw = (psw p) { fCarry = True }, regPC = regPC p + 1 }, Nothing)
+executeOperation CMC _ (Computer m p) =
+  (Computer m $ p { psw = (psw p) { fCarry = not $ fCarry $ psw p }, regPC = regPC p + 1 }, Nothing)
+executeOperation RET _ c = (executeReturn c, Nothing)
+executeOperation RET' _ c = (executeReturn c, Nothing)
+executeOperation PCHL _ (Computer m p) =
+  (Computer m $ p { regPC = fromIntegral (regH p) * 256 + fromIntegral (regL p) }, Nothing)
+executeOperation SPHL _ (Computer m p) =
+  (Computer m $ p { regSP = fromIntegral (regH p) * 256 + fromIntegral (regL p), regPC = regPC p + 1 }, Nothing)
+executeOperation JMP _ c = (executeJump c, Nothing)
+executeOperation JMP' _ c = (executeJump c, Nothing)
+executeOperation OUT _ (Computer m p) =
   let n = loadByte m p in
-  setPort n (regA p) $ Computer o m $ p { regPC = regPC p + 2 }
-executeOperation IN (Computer o m p) =
+  (Computer m $ p { regPC = regPC p + 2 }, Just $ PortOut n (regA p))
+executeOperation IN port_in (Computer m p) =
   let n = loadByte m p in
-  let b = getPort n $ Computer o m p in
-  Computer o m $ p { regA = b, regPC = regPC p + 2 }
-executeOperation XTHL (Computer o m p) =
+  (Computer m $ p { regA = port_in n, regPC = regPC p + 2 }, Nothing)
+executeOperation XTHL _ (Computer m p) =
   let l = regL p in
   let h = regH p in
   let l' = fromMaybe 0 $ m !? (fromIntegral $ regSP p) in
   let h' = fromMaybe 0 $ m !? (fromIntegral $ regSP p + 1) in
   let m' = m // [(fromIntegral $ regSP p, l), (fromIntegral $ regSP p + 1, h)] in
-  Computer o m' $ p { regH = h', regL = l', regPC = regPC p + 1 }
-executeOperation XCHG (Computer o m p) =
+  (Computer m' $ p { regH = h', regL = l', regPC = regPC p + 1 }, Nothing)
+executeOperation XCHG _ (Computer m p) =
   let l = regL p in
   let h = regH p in
   let e = regE p in
   let d = regD p in
-  Computer o m $ p { regH = d, regL = e, regD = h, regE = l, regPC = regPC p + 1 }
-executeOperation DI (Computer o m p) = Computer o m $ p { interruptsEnabled = False, regPC = regPC p + 1 }
-executeOperation EI (Computer o m p) = Computer o m $ p { interruptsEnabled = True, regPC = regPC p + 1 }
-executeOperation ADI (Computer o m p) =
+  (Computer m $ p { regH = d, regL = e, regD = h, regE = l, regPC = regPC p + 1 }, Nothing)
+executeOperation DI _ (Computer m p) =
+  (Computer m $ p { interruptsEnabled = False, regPC = regPC p + 1 }, Nothing)
+executeOperation EI _ (Computer m p) =
+  (Computer m $ p { interruptsEnabled = True, regPC = regPC p + 1 }, Nothing)
+executeOperation ADI _ (Computer m p) =
   let d = loadByte m p in
   let ac = (regA p .&. 0x0F) + (d .&. 0x0F) > 0x0F in
   let r = fromIntegral (regA p) + fromIntegral d in
   let c = (r :: Word16) > 0xFF in
   let a = fromIntegral $ r .&. 0xFF in
   let s = (pswUpdate (psw p) a) { fCarry = c, fAuxCarry = ac } in
-  Computer o m $ p { regA = a, psw = s, regPC = regPC p + 2 }
-executeOperation ACI (Computer o m p) =
+  (Computer m $ p { regA = a, psw = s, regPC = regPC p + 2 }, Nothing)
+executeOperation ACI _ (Computer m p) =
   let d = fromIntegral (loadByte m p) + fromIntegral (flagCode $ fCarry $ psw p) in
   let ac = (fromIntegral (regA p) .&. 0x0F) + (d .&. 0x0F) > 0x0F in
   let r = fromIntegral (regA p) + d in
   let c = (r :: Word16) > 0xFF in
   let a = fromIntegral $ r .&. 0xFF in
   let s = (pswUpdate (psw p) a) { fCarry = c, fAuxCarry = ac } in
-  Computer o m $ p { regA = a, psw = s, regPC = regPC p + 2 }
-executeOperation SUI (Computer o m p) =
+  (Computer m $ p { regA = a, psw = s, regPC = regPC p + 2 }, Nothing)
+executeOperation SUI _ (Computer m p) =
   let d = loadByte m p in
   let ac = (regA p .&. 0x0F) < (d .&. 0x0F) in
   let c = regA p < d in
   let r = if c then 0x0100 .|. fromIntegral (regA p) else fromIntegral (regA p) in
   let a = fromIntegral $ (r :: Word16) - fromIntegral d in
   let s = (pswUpdate (psw p) a) { fCarry = c, fAuxCarry = ac } in
-  Computer o m $ p { regA = a, psw = s, regPC = regPC p + 2 }
-executeOperation SBI (Computer o m p) =
+  (Computer m $ p { regA = a, psw = s, regPC = regPC p + 2 }, Nothing)
+executeOperation SBI _ (Computer m p) =
   let d = fromIntegral (loadByte m p) + fromIntegral (flagCode $ fCarry $ psw p) in
   let ac = (fromIntegral (regA p) .&. 0x0F) < (d .&. 0x0F) in
   let c = fromIntegral (regA p) < (d :: Word16) in
   let r = if c then 0x0100 .|. fromIntegral (regA p) else fromIntegral (regA p) in
   let a = fromIntegral $ r - d in
   let s = (pswUpdate (psw p) a) { fCarry = c, fAuxCarry = ac } in
-  Computer o m $ p { regA = a, psw = s, regPC = regPC p + 2 }
-executeOperation ANI (Computer o m p) =
+  (Computer m $ p { regA = a, psw = s, regPC = regPC p + 2 }, Nothing)
+executeOperation ANI _ (Computer m p) =
   let d = loadByte m p in
   let a = regA p .&. d in
   let s = (pswUpdate (psw p) a) { fCarry = False, fAuxCarry = False } in
-  Computer o m $ p { regA = a, psw = s, regPC = regPC p + 2 }
-executeOperation XRI (Computer o m p) =
+  (Computer m $ p { regA = a, psw = s, regPC = regPC p + 2 }, Nothing)
+executeOperation XRI _ (Computer m p) =
   let d = loadByte m p in
   let a = regA p `xor` d in
   let s = (pswUpdate (psw p) a) { fCarry = False, fAuxCarry = False } in
-  Computer o m $ p { regA = a, psw = s, regPC = regPC p + 2 }
-executeOperation ORI (Computer o m p) =
+  (Computer m $ p { regA = a, psw = s, regPC = regPC p + 2 }, Nothing)
+executeOperation ORI _ (Computer m p) =
   let d = loadByte m p in
   let a = regA p .|. d in
   let s = (pswUpdate (psw p) a) { fCarry = False, fAuxCarry = False } in
-  Computer o m $ p { regA = a, psw = s, regPC = regPC p + 2 }
-executeOperation CPI (Computer o m p) =
+  (Computer m $ p { regA = a, psw = s, regPC = regPC p + 2 }, Nothing)
+executeOperation CPI _ (Computer m p) =
   let d = loadByte m p in
   let z = regA p == d in
   let ac = (regA p .&. 0x0F) < (d .&. 0x0F) in
   let c = regA p < d in
   let r = (regA p .&. 0x01) == (d .&. 0x01) in
   let s = (psw p) { fZero = z, fSign = c, fCarry = c, fAuxCarry = ac, fParity = r } in
-  Computer o m $ p { psw = s, regPC = regPC p + 2 }
-executeOperation (MOV R_M R_M) (Computer o m p) = Computer o m $ p { isHalted = True }
-executeOperation (MOV rd rs) (Computer o m p) =
+  (Computer m $ p { psw = s, regPC = regPC p + 2 }, Nothing)
+executeOperation (MOV R_M R_M) _ (Computer m p) =
+  (Computer m $ p { isHalted = True }, Nothing)
+executeOperation (MOV rd rs) _ (Computer m p) =
   let d = getReg rs m p in
-  setReg rd d $ Computer o m $ p { regPC = regPC p + 1 }
-executeOperation (ADD rs) (Computer o m p) =
+  (setReg rd d $ Computer m $ p { regPC = regPC p + 1 }, Nothing)
+executeOperation (ADD rs) _ (Computer m p) =
   let d = getReg rs m p in
   let ac = (regA p .&. 0x0F) + (d .&. 0x0F) > 0x0F in
   let r = fromIntegral (regA p) + fromIntegral d in
   let c = (r :: Word16) > 0xFF in
   let a = fromIntegral $ r .&. 0xFF in
   let s = (pswUpdate (psw p) a) { fCarry = c, fAuxCarry = ac } in
-  Computer o m $ p { regA = a, psw = s, regPC = regPC p + 1 }
-executeOperation (ADC rs) (Computer o m p) =
+  (Computer m $ p { regA = a, psw = s, regPC = regPC p + 1 }, Nothing)
+executeOperation (ADC rs) _ (Computer m p) =
   let d = fromIntegral (getReg rs m p) + fromIntegral (flagCode $ fCarry $ psw p) in
   let ac = (fromIntegral (regA p) .&. 0x0F) + (d .&. 0x0F) > 0x0F in
   let r = fromIntegral (regA p) + d in
   let c = (r :: Word16) > 0xFF in
   let a = fromIntegral $ r .&. 0xFF in
   let s = (pswUpdate (psw p) a) { fCarry = c, fAuxCarry = ac } in
-  Computer o m $ p { regA = a, psw = s, regPC = regPC p + 1 }
-executeOperation (SUB rs) (Computer o m p) =
+  (Computer m $ p { regA = a, psw = s, regPC = regPC p + 1 }, Nothing)
+executeOperation (SUB rs) _ (Computer m p) =
   let d = getReg rs m p in
   let ac = (regA p .&. 0x0F) < (d .&. 0x0F) in
   let c = regA p < d in
   let r = if c then 0x0100 .|. fromIntegral (regA p) else fromIntegral (regA p) in
   let a = fromIntegral $ (r :: Word16) - fromIntegral d in
   let s = (pswUpdate (psw p) a) { fCarry = c, fAuxCarry = ac } in
-  Computer o m $ p { regA = a, psw = s, regPC = regPC p + 1 }
-executeOperation (SBB rs) (Computer o m p) =
+  (Computer m $ p { regA = a, psw = s, regPC = regPC p + 1 }, Nothing)
+executeOperation (SBB rs) _ (Computer m p) =
   let d = fromIntegral (getReg rs m p) + fromIntegral (flagCode $ fCarry $ psw p) in
   let ac = (fromIntegral (regA p) .&. 0x0F) < (d .&. 0x0F) in
   let c = fromIntegral (regA p) < (d :: Word16) in
   let r = if c then 0x0100 .|. fromIntegral (regA p) else fromIntegral (regA p) in
   let a = fromIntegral $ r - d in
   let s = (pswUpdate (psw p) a) { fCarry = c, fAuxCarry = ac } in
-  Computer o m $ p { regA = a, psw = s, regPC = regPC p + 1 }
-executeOperation (ANA rs) (Computer o m p) =
+  (Computer m $ p { regA = a, psw = s, regPC = regPC p + 1 }, Nothing)
+executeOperation (ANA rs) _ (Computer m p) =
   let d = getReg rs m p in
   let a = regA p .&. d in
   let s = (pswUpdate (psw p) a) { fCarry = False, fAuxCarry = False } in
-  Computer o m $ p { regA = a, psw = s, regPC = regPC p + 1 }
-executeOperation (XRA rs) (Computer o m p) =
+  (Computer m $ p { regA = a, psw = s, regPC = regPC p + 1 }, Nothing)
+executeOperation (XRA rs) _ (Computer m p) =
   let d = getReg rs m p in
   let a = regA p `xor` d in
   let s = (pswUpdate (psw p) a) { fCarry = False, fAuxCarry = False } in
-  Computer o m $ p { regA = a, psw = s, regPC = regPC p + 1 }
-executeOperation (ORA rs) (Computer o m p) =
+  (Computer m $ p { regA = a, psw = s, regPC = regPC p + 1 }, Nothing)
+executeOperation (ORA rs) _ (Computer m p) =
   let d = getReg rs m p in
   let a = regA p .|. d in
   let s = (pswUpdate (psw p) a) { fCarry = False, fAuxCarry = False } in
-  Computer o m $ p { regA = a, psw = s, regPC = regPC p + 1 }
-executeOperation (CMP rs) (Computer o m p) =
+  (Computer m $ p { regA = a, psw = s, regPC = regPC p + 1 }, Nothing)
+executeOperation (CMP rs) _ (Computer m p) =
   let d = getReg rs m p in
   let z = regA p == d in
   let ac = (regA p .&. 0x0F) < (d .&. 0x0F) in
   let c = regA p < d in
   let r = (regA p .&. 0x01) == (d .&. 0x01) in
   let s = (psw p) { fZero = z, fSign = c, fCarry = c, fAuxCarry = ac, fParity = r } in
-  Computer o m $ p { psw = s, regPC = regPC p + 1 }
-executeOperation (NOP _) (Computer o m p) = Computer o m $ p { regPC = regPC p + 1 }
-executeOperation (LXI rd) (Computer o m p) =
+  (Computer m $ p { psw = s, regPC = regPC p + 1 }, Nothing)
+executeOperation (NOP _) _ (Computer m p) =
+  (Computer m $ p { regPC = regPC p + 1 }, Nothing)
+executeOperation (LXI rd) _ (Computer m p) =
   let d = loadWord m p in
   let p' = setRegPair rd d p in
-  Computer o m $ p' { regPC = regPC p + 3 }
-executeOperation (DAD rs) (Computer o m p) =
+  (Computer m $ p' { regPC = regPC p + 3 }, Nothing)
+executeOperation (DAD rs) _ (Computer m p) =
   let d = getRegPair rs p in
   let w = fromIntegral (regH p) * 256 + fromIntegral (regL p) in
   let r = fromIntegral (w :: Word16) + fromIntegral d in
   let c = (r :: Word32) > 0xFFFF in
   let h' = fromIntegral $ (r .&. 0xFF00) `shift` (-8) in
   let l' = fromIntegral $ r .&. 0xFF in
-  Computer o m $ p { psw = (psw p) { fCarry = c }, regH = h', regL = l', regPC = regPC p + 1 }
-executeOperation (STAX rs) (Computer o m p) =
+  (Computer m $ p { psw = (psw p) { fCarry = c }, regH = h', regL = l', regPC = regPC p + 1 }, Nothing)
+executeOperation (STAX rs) _ (Computer m p) =
   let addr = getRegExt rs p in
   let m' = m // [(fromIntegral addr, regA p)] in
-  Computer o m' $ p { regPC = regPC p + 1 }
-executeOperation (LDAX rd) (Computer o m p) =
+  (Computer m' $ p { regPC = regPC p + 1 }, Nothing)
+executeOperation (LDAX rd) _ (Computer m p) =
   let addr = getRegExt rd p in
   let d = fromMaybe 0 $ m !? fromIntegral addr in
-  Computer o m $ p { regA = d, regPC = regPC p + 1 }
-executeOperation (INX rd) (Computer o m p) =
+  (Computer m $ p { regA = d, regPC = regPC p + 1 }, Nothing)
+executeOperation (INX rd) _ (Computer m p) =
   let d = getRegPair rd p in
   let p' = setRegPair rd (d + 1) p in
-  Computer o m $ p' { regPC = regPC p + 1 }
-executeOperation (DCX rd) (Computer o m p) =
+  (Computer m $ p' { regPC = regPC p + 1 }, Nothing)
+executeOperation (DCX rd) _ (Computer m p) =
   let d = getRegPair rd p in
   let p' = setRegPair rd (d - 1) p in
-  Computer o m $ p' { regPC = regPC p + 1 }
-executeOperation (INR rd) (Computer o m p) =
+  (Computer m $ p' { regPC = regPC p + 1 }, Nothing)
+executeOperation (INR rd) _ (Computer m p) =
   let d = getReg rd m p in
   let ac = (d .&. 0x0F) + 1 > 0x0F in
   let r = fromIntegral d + 1 in
   let c = (r :: Word16) > 0xFF in
   let a = fromIntegral $ r .&. 0xFF in
   let s = (pswUpdate (psw p) a) { fCarry = c, fAuxCarry = ac } in
-  setReg rd a $ Computer o m $ p { psw = s, regPC = regPC p + 1 }
-executeOperation (DCR rd) (Computer o m p) =
+  (setReg rd a $ Computer m $ p { psw = s, regPC = regPC p + 1 }, Nothing)
+executeOperation (DCR rd) _ (Computer m p) =
   let d = getReg rd m p in
   let ac = (d .&. 0x0F) < 1 in
   let c = d < 1 in
   let r = if c then 0x0100 .|. fromIntegral d else fromIntegral d in
   let a = fromIntegral $ (r :: Word16) - 1 in
   let s = (pswUpdate (psw p) a) { fCarry = c, fAuxCarry = ac } in
-  setReg rd a $ Computer o m $ p { psw = s, regPC = regPC p + 1 }
-executeOperation (MVI rd) (Computer o m p) =
+  (setReg rd a $ Computer m $ p { psw = s, regPC = regPC p + 1 }, Nothing)
+executeOperation (MVI rd) _ (Computer m p) =
   let d = loadByte m p in
-  setReg rd d $ Computer o m $ p { regPC = regPC p + 2 }
-executeOperation (RCC cond) (Computer o m p) =
+  (setReg rd d $ Computer m $ p { regPC = regPC p + 2 }, Nothing)
+executeOperation (RCC cond) _ (Computer m p) =
   if fitCondition cond (psw p)
-    then executeReturn (Computer o m p)
-    else Computer o m $ p { regPC = regPC p + 1 }
-executeOperation (POP rd) (Computer o m p) =
+    then (executeReturn (Computer m p), Nothing)
+    else (Computer m $ p { regPC = regPC p + 1 }, Nothing)
+executeOperation (POP rd) _ (Computer m p) =
   let l = fromMaybe 0 $ m !? (fromIntegral $ regSP p) in
   let h = fromMaybe 0 $ m !? (fromIntegral $ regSP p + 1) in
   let p' = setRegWord rd (fromIntegral h * 256 + fromIntegral l) p in
-  Computer o m $ p' { regSP = regSP p + 2, regPC = regPC p + 1 }
-executeOperation (JCC cond) (Computer o m p) =
+  (Computer m $ p' { regSP = regSP p + 2, regPC = regPC p + 1 }, Nothing)
+executeOperation (JCC cond) _ (Computer m p) =
   if fitCondition cond (psw p)
-    then executeJump (Computer o m p)
-    else Computer o m $ p { regPC = regPC p + 3 }
-executeOperation (CCC cond) (Computer o m p) =
+    then (executeJump (Computer m p), Nothing)
+    else (Computer m $ p { regPC = regPC p + 3 }, Nothing)
+executeOperation (CCC cond) _ (Computer m p) =
   if fitCondition cond (psw p)
-    then executeCall (Computer o m p)
-    else Computer o m $ p { regPC = regPC p + 3 }
-executeOperation (PUSH rs) (Computer o m p) =
+    then (executeCall (Computer m p), Nothing)
+    else (Computer m $ p { regPC = regPC p + 3 }, Nothing)
+executeOperation (PUSH rs) _ (Computer m p) =
   let d = getRegWord rs p in
   let h = fromIntegral $ (d .&. 0xFF00) `shift` (-8) in
   let l = fromIntegral $ d .&. 0x00FF in
   let m' = m // [(fromIntegral (regSP p - 1), h), (fromIntegral (regSP p - 2), l)] in
-  Computer o m' $ p { regSP = regSP p - 2, regPC = regPC p + 1 }
-executeOperation (CALL _) c = executeCall c
-executeOperation (RST n) (Computer o m p) = Computer o m $ p { regPC = fromIntegral n * 8 }
+  (Computer m' $ p { regSP = regSP p - 2, regPC = regPC p + 1 }, Nothing)
+executeOperation (CALL _) _ c =
+  (executeCall c, Nothing)
+executeOperation (RST n) _ (Computer m p) =
+  (Computer m $ p { regPC = fromIntegral n * 8 }, Nothing)
 
-cpuStep :: Computer -> (Computer, Int64)
-cpuStep (Computer o m p) =
+type PortIn = Word8 -> Word8
+data PortOut = PortOut { portNumber :: !Word8, portValue :: !Word8 }
+
+cpuStep :: PortIn -> Computer -> (Computer, Maybe PortOut, Int64)
+cpuStep port_in (Computer m p) =
   let op_code = fromMaybe 0 $ m !? (fromIntegral $ regPC p) in
   let operation = cpuOperation op_code in
-  (executeOperation operation (Computer o m p), operationTicks operation (psw p))
+  let (c, port_out) = executeOperation operation port_in (Computer m p) in
+  (c, port_out, operationTicks operation (psw p))
 
 hl :: Word8 -> Word8 -> Word16
 hl h l = (fromIntegral h `shift` 8) .|. fromIntegral l
 
-getPort :: Word8 -> Computer -> Word8
-getPort n (Computer o _ _) = fromMaybe (error "gpi") $ o !? fromIntegral n
-
-setPort :: Word8 -> Word8 -> Computer -> Computer
-setPort n a (Computer o m p) =
-  let current_value = getPort n (Computer o m p) in
-  if current_value == a
-    then Computer o m p
-    else Computer (o // [(fromIntegral n, a)]) m p
-
 getMemory :: Word16 -> Computer -> Word8
-getMemory addr (Computer _ m _) = fromMaybe 0 $ m !? fromIntegral addr
+getMemory addr (Computer m _) = fromMaybe 0 $ m !? fromIntegral addr
 
 setMemory :: Word16 -> Word8 -> Computer -> Computer
-setMemory addr a (Computer o m p) = Computer o (m // [(fromIntegral addr, a)]) p
+setMemory addr a (Computer m p) = Computer (m // [(fromIntegral addr, a)]) p
 
 isCPUHalted :: Computer -> Bool
 isCPUHalted = isHalted . cpu

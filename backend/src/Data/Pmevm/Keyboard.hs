@@ -34,6 +34,7 @@ module Data.Pmevm.Keyboard
   , keyF
   , initKeyboard
   , key
+  , ComputerWithPorts (..)
   , keyboardStep
   ) where
 

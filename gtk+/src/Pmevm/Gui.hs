@@ -40,14 +40,14 @@ buildUI file = do
   b <- builderNew
   builderAddFromFile b file
   window <- builderGetObject b castToWindow ("applicationWindow" :: S.Text)
-  port0 <- V.generateM 8 $ \i -> builderGetObject b castToStack ("port0_" <> ST.pack (show i))
-  port1 <- V.generateM 8 $ \i -> builderGetObject b castToStack ("port1_" <> ST.pack (show i))
-  port2 <- V.generateM 8 $ \i -> builderGetObject b castToStack ("port2_" <> ST.pack (show i))
+  p0 <- V.generateM 8 $ \i -> builderGetObject b castToStack ("port0_" <> ST.pack (show i))
+  p1 <- V.generateM 8 $ \i -> builderGetObject b castToStack ("port1_" <> ST.pack (show i))
+  p2 <- V.generateM 8 $ \i -> builderGetObject b castToStack ("port2_" <> ST.pack (show i))
   keys <- V.generateM 16 $ \i -> builderGetObject b castToToggleButton ("k" <> ST.pack (show i))
 --  reset <- builderGetObject b castToButton ("reset" :: S.Text)
 --  mc <- builderGetObject b castToButton ("mc" :: S.Text)
 --  sbs <- builderGetObject b castToSwitch ("s-b-s" :: S.Text)
-  return $ UI window port0 port1 port2 keys-- reset mc -- sbs
+  return $ UI window p0 p1 p2 keys-- reset mc -- sbs
 
 uiKeyboard :: UI -> IO Keyboard
 uiKeyboard ui = V.ifoldM' (\k i b -> ($ k) <$> set (key i) <$> toggleButtonGetActive b) initKeyboard (uiKeys ui)
@@ -64,36 +64,35 @@ passedTicks t0 = do
   return (t, clockSpeedInMHz * ((sec t - sec t0) * 1000000 + (nsec t - nsec t0) `div` 1000))
 
 data UIData = UIData
-  { _dComputer :: !Computer
+  { _dComputer :: !ComputerWithPorts
   , _dStartTime :: !TimeSpec
   , _dStartTicks :: !Int64
   }
 makeLenses ''UIData
 
-updatePort :: Word8 -> Vector Stack -> Computer -> IO ()
-updatePort n p c = do
-  let v = getPort n c
+updatePort :: Vector Stack -> Word8 -> IO ()
+updatePort p v = do
   forM_ [0 .. 7] $ \i -> do
      let s = fromMaybe (error "frame") $ p !? i
      K.set s [stackVisibleChildName := if testBit v i then "1" else "0"]
 
-data ComputerState = ComputerState !Computer !Int64
+data ComputerState = ComputerState !ComputerWithPorts !Int64
 sTicks :: ComputerState -> Int64
 sTicks (ComputerState _ t) = t
 
 computerStep :: Keyboard -> ComputerState -> ComputerState
 computerStep k (ComputerState c t) =
-  let (cn, d) = cpuStep  c in
-  ComputerState (let x = keyboardStep k cn in x `seq` x) (t + d)
+  let (cn, d) = keyboardStep k c in
+  ComputerState cn (t + d)
 
 frame :: UI -> IORef UIData -> IO ()
 frame ui d = do
   dx <- readIORef d
   (t, ticks) <- passedTicks $ view dStartTime dx
   let c = view dComputer dx
-  updatePort 0 (uiPort0 ui) c
-  updatePort 1 (uiPort1 ui) c
-  updatePort 2 (uiPort2 ui) c
+  updatePort (uiPort0 ui) (port0 c)
+  updatePort (uiPort1 ui) (port1 c)
+  updatePort (uiPort2 ui) (port2 c)
   keyboard <- uiKeyboard ui
   let
     ComputerState cn ct
@@ -110,7 +109,7 @@ gmevm = do
   void $ on (uiWindow ui) deleteEvent $ tryEvent $ lift mainQuit
   let comp = setProgram monitor initComputer
   t <- getTime Monotonic
-  d <- newIORef $ UIData comp t 0
+  d <- newIORef $ UIData (ComputerWithPorts comp 0 0 0 0) t 0
   _ <- timeoutAdd (frame ui d >> return True) $ round (1000.0 / fps)
   widgetShowAll (uiWindow ui)
   mainGUI
