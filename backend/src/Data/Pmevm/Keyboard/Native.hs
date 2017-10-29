@@ -88,4 +88,5 @@ keyboardStep k c =
     Just (PortOut 0 v) -> (c { computer = cn, port0 = v }, t)
     Just (PortOut 1 v) -> (c { computer = cn, port1 = v }, t)
     Just (PortOut 2 v) -> (c { computer = cn, port2 = v }, t)
+    Just (PortOut 3 v) -> (c { computer = cn, port3 = v }, t)
     _ -> (c { computer = cn }, t)
