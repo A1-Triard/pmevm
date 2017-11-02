@@ -540,6 +540,7 @@ executeCall (Computer m p) =
   let m' = m // [(fromIntegral (regSP p - 1), ret_h), (fromIntegral (regSP p - 2), ret_l)] in
   Computer m' $ p { regSP = regSP p - 2, regPC = addr }
 
+{-# INLINE executeOperation #-}
 executeOperation :: CPUOperation -> PortIn -> Computer -> (Computer, Maybe PortOut)
 executeOperation _ _ (Computer m (asHalted -> Just p)) =
   (Computer m p, Nothing)
