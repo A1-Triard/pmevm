@@ -31,12 +31,13 @@ module Data.Pmevm
   , PortOut (..)
   , getMemory
   , setMemory
-  , isCPUHalted
+  , isCpuHalted
   , areInterruptsEnabled
   , getPC
   , setPC
   , getRegister
   , getFlag
+  , ProgramLine (..)
   , Program (..)
   , setProgram
   ) where
@@ -821,7 +822,7 @@ executeOperation (RST n) _ (Computer m p) =
   (Computer m $ p { regPC = fromIntegral n * 8 }, Nothing)
 
 type PortIn = Word8 -> Word8
-data PortOut = PortOut { portNumber :: !Word8, portValue :: !Word8 }
+data PortOut = PortOut { portNumber :: !Word8, portValue :: !Word8 } deriving (Show, Eq)
 
 cpuStep :: PortIn -> Computer -> (Computer, Maybe PortOut, Int64)
 cpuStep port_in (Computer m p) =
@@ -839,8 +840,8 @@ getMemory addr (Computer m _) = fromMaybe 0 $ m !? fromIntegral addr
 setMemory :: Word16 -> Word8 -> Computer -> Computer
 setMemory addr a (Computer m p) = Computer (m // [(fromIntegral addr, a)]) p
 
-isCPUHalted :: Computer -> Bool
-isCPUHalted = isHalted . cpu
+isCpuHalted :: Computer -> Bool
+isCpuHalted = isHalted . cpu
 
 areInterruptsEnabled :: Computer -> Bool
 areInterruptsEnabled = interruptsEnabled . cpu
@@ -857,10 +858,11 @@ getRegister r c = getReg r (memory c) (cpu c)
 getFlag :: CPUCondition -> Computer -> Bool
 getFlag cond c = fitCondition cond (psw $ cpu c)
 
-newtype Program = Program [(Word8, Word8, Word8, String)]
+data ProgramLine = I !Word8 !Word8 !Word8 !S.Text
+newtype Program = Program [ProgramLine]
 
 setProgram :: Program -> Computer -> Computer
-setProgram (Program program) computer = foldl (\c (address_h, address_l, opcode, _) -> setMemory (hl address_h address_l) opcode c) computer program
+setProgram (Program program) computer = foldl (\c (I address_h address_l opcode _) -> setMemory (hl address_h address_l) opcode c) computer program
 
 showByte :: Word8 -> String
 showByte b
@@ -868,5 +870,8 @@ showByte b
   | b < 64 = "0" ++ showOct b ""
   | otherwise = showOct b ""
 
+instance Show ProgramLine where
+  show (I h l c t) = showByte h ++ " " ++ showByte l ++ " " ++ showByte c ++ " " ++ ST.unpack t
+
 instance Show Program where
-  show (Program p) = intercalate "\n" [showByte h ++ " " ++ showByte l ++ " " ++ showByte c ++ " " ++ t | (h, l, c, t) <- p]
+  show (Program p) = intercalate "\n" $ map show p

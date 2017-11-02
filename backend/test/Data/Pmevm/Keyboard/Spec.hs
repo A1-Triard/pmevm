@@ -26,20 +26,15 @@ import Data.Pmevm.Monitor
 
 tests :: Test
 tests = TestList
-  [ TestCase freeKeyboardTest
-  , TestCase sklTest
+  [ TestCase sklTest
   ]
 
-freeKeyboardTest :: Assertion
-freeKeyboardTest = do
-  assertEqual "" 240 $ getPort 3 $ keyboardStep initKeyboard $ setPort 3 0 $ initComputer
-
-computerStep :: Keyboard -> (Computer, Int64) -> (Computer, Int64)
+computerStep :: Keyboard -> (ComputerWithPorts, Int64) -> (ComputerWithPorts, Int64)
 computerStep k (c, t) =
-  let (cn, d) = cpuStep c in
-  (keyboardStep k cn, t + d)
+  let (cn, d) = keyboardStep k c in
+  (cn, t + d)
 
-wait :: Int64 -> Keyboard -> Computer -> Computer
+wait :: Int64 -> Keyboard -> ComputerWithPorts -> ComputerWithPorts
 wait n k c = fst $ fromMaybe (error "") $ find ((>= n) . snd) $ iterate (computerStep k) (c, 0)
 
 sklTest :: Assertion
@@ -47,31 +42,31 @@ sklTest = do
   let k0 = initKeyboard
   let k1 = set key2 True initKeyboard
   let k2 = set key8 True initKeyboard
-  let c0 = setPC (hl 0o014 0o000) $ setProgram testProgram $ setProgram monitor initComputer
+  let c0 = initPorts $ setPC (hl 0o014 0o000) $ setProgram sklTestProgram $ setProgram monitor initComputer
   let c1 = wait 100000 k0 c0
-  assertEqual "" 240 $ getPort 3 c1
+  assertEqual "" 0 $ view port1 c1
   let c2 = wait 100000 k1 c1
-  assertEqual "" 224 $ getPort 3 c2
+  assertEqual "" 2 $ view port1 c2
   let c3 = wait 100000 k0 c2
-  assertEqual "" 240 $ getPort 3 c3
+  assertEqual "" 2 $ view port1 c3
   let c4 = wait 100000 k2 c3
-  assertEqual "" 176 $ getPort 3 c4
+  assertEqual "" 8 $ view port1 c4
   let c5 = wait 100000 k0 c4
-  assertEqual "" 240 $ getPort 3 c5
+  assertEqual "" 8 $ view port1 c5
 
-testProgram :: Program
-testProgram = Program
-  [ (0o014, 0o000, 0o315, "   START: CALL SKL          ")
-  , (0o014, 0o001, 0o177, "                            ")
-  , (0o014, 0o002, 0o000, "                            ")
-  , (0o014, 0o003, 0o376, "          CPI 177Q          ")
-  , (0o014, 0o004, 0o177, "                            ")
-  , (0o014, 0o005, 0o312, "          JZ START          ")
-  , (0o014, 0o006, 0o000, "                            ")
-  , (0o014, 0o007, 0o014, "                            ")
-  , (0o014, 0o010, 0o323, "          OUT 003Q          ")
-  , (0o014, 0o011, 0o003, "                            ")
-  , (0o014, 0o012, 0o303, "          JMP START         ")
-  , (0o014, 0o013, 0o000, "                            ")
-  , (0o014, 0o014, 0o014, "                            ")
+sklTestProgram :: Program
+sklTestProgram = Program
+  [ I 0o014 0o000 0o315 "   START: CALL SKL          "
+  , I 0o014 0o001 0o177 "                            "
+  , I 0o014 0o002 0o000 "                            "
+  , I 0o014 0o003 0o376 "          CPI 177Q          "
+  , I 0o014 0o004 0o177 "                            "
+  , I 0o014 0o005 0o312 "          JZ START          "
+  , I 0o014 0o006 0o000 "                            "
+  , I 0o014 0o007 0o014 "                            "
+  , I 0o014 0o010 0o323 "          OUT 001Q          "
+  , I 0o014 0o011 0o001 "                            "
+  , I 0o014 0o012 0o303 "          JMP START         "
+  , I 0o014 0o013 0o000 "                            "
+  , I 0o014 0o014 0o014 "                            "
   ]
