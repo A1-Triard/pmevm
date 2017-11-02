@@ -56,7 +56,7 @@ fps :: Double
 fps = 50.0
 
 clockSpeedInMHz :: Int64
-clockSpeedInMHz = 1
+clockSpeedInMHz = 26
 
 passedTicks :: TimeSpec -> IO (TimeSpec, Int64)
 passedTicks t0 = do

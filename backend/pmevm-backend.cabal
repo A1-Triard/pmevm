@@ -16,11 +16,8 @@ cabal-version: >=1.10
 library
   hs-source-dirs: src
   exposed-modules: Data.Pmevm
-                 , Data.Pmevm.Native
                  , Data.Pmevm.Monitor
-                 , Data.Pmevm.Monitor.Native
                  , Data.Pmevm.Keyboard
-                 , Data.Pmevm.Keyboard.Native
   build-depends: base >= 4.7 && < 5
                , lens
                , vector
