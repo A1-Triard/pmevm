@@ -35,16 +35,18 @@ data UI = UI
 --  , uiSbs :: !Switch
   }
 
-buildUI :: String -> IO UI
+builderGet :: GObject a => Builder -> (ManagedPtr a -> a) -> S.Text -> IO a
+builderGet b casting t = builderGetObject b t >>= unsafeCastTo casting . fromMaybe (error $ ST.unpack t)
+
+buildUI :: FilePath -> IO UI
 buildUI file = do
-  b <- builderNew
-  builderAddFromFile b file
-  window <- builderGetObject b castToWindow ("applicationWindow" :: S.Text)
-  p0 <- V.generateM 8 $ \i -> builderGetObject b castToStack ("port0_" <> ST.pack (show i))
-  p1 <- V.generateM 8 $ \i -> builderGetObject b castToStack ("port1_" <> ST.pack (show i))
-  p2 <- V.generateM 8 $ \i -> builderGetObject b castToStack ("port2_" <> ST.pack (show i))
-  keys <- V.generateM 16 $ \i -> builderGetObject b castToToggleButton ("k" <> ST.pack (show i))
-  r <- builderGetObject b castToButton ("reset" :: S.Text)
+  b <- builderNewFromFile $ ST.pack file
+  window <- builderGet b Window "applicationWindow"
+  p0 <- V.generateM 8 $ \i -> builderGet b Stack ("port0_" <> ST.pack (show i))
+  p1 <- V.generateM 8 $ \i -> builderGet b Stack ("port1_" <> ST.pack (show i))
+  p2 <- V.generateM 8 $ \i -> builderGet b Stack ("port2_" <> ST.pack (show i))
+  keys <- V.generateM 16 $ \i -> builderGet b ToggleButton ("k" <> ST.pack (show i))
+  r <- builderGet b Button "reset"
 --  mc <- builderGetObject b castToButton ("mc" :: S.Text)
 --  sbs <- builderGetObject b castToSwitch ("s-b-s" :: S.Text)
   return $ UI window p0 p1 p2 keys r-- mc sbs
@@ -116,71 +118,79 @@ updateKey b d t = do
   modifyIORef' d t
   toggleButtonSetActive b =<< (\x -> view kdButton x || view kdEnter x || view kdSpace x || view kdGesture x) <$> readIORef d
 
-buttonPress :: ToggleButton -> IORef KeyData -> EventM EButton ()
-buttonPress b d = do
-  LeftButton <- eventButton
-  lift $ updateKey b d $ set kdButton True
+buttonPress :: ToggleButton -> IORef KeyData -> EventButton -> IO ()
+buttonPress b d e = do
+  1 <- getEventButtonButton e
+  updateKey b d $ set kdButton True
 
-buttonRelease :: ToggleButton -> IORef KeyData -> EventM EButton ()
-buttonRelease b d = do
-  LeftButton <- eventButton
-  lift $ updateKey b d $ set kdButton False
+buttonRelease :: ToggleButton -> IORef KeyData -> EventButton -> IO ()
+buttonRelease b d e = do
+  1 <- getEventButtonButton e
+  updateKey b d $ set kdButton False
 
-keyPress :: ToggleButton -> IORef KeyData -> EventM EKey ()
-keyPress b d = do
-  k <- eventKeyVal
+keyPress :: ToggleButton -> IORef KeyData -> EventKey -> IO ()
+keyPress b d e = do
+  k <- getEventKeyKeyval e
   t <- case k of
     x | x == keyEnterValue -> return kdEnter
     x | x == keySpaceValue -> return kdSpace
     _ -> mzero
-  lift $ updateKey b d $ set t True
+  updateKey b d $ set t True
 
-keyRelease :: ToggleButton -> IORef KeyData -> EventM EKey ()
-keyRelease b d = do
-  k <- eventKeyVal
+keyRelease :: ToggleButton -> IORef KeyData -> EventKey -> IO ()
+keyRelease b d e = do
+  k <- getEventKeyKeyval e
   t <- case k of
     x | x == keyEnterValue -> return kdEnter
     x | x == keySpaceValue -> return kdSpace
     _ -> mzero
-  lift $ updateKey b d $ set t False
+  updateKey b d $ set t False
 
-keyGesturePress :: ToggleButton -> IORef KeyData -> Word32 -> EventM EKey ()
-keyGesturePress b d key_value = do
-  k <- eventKeyVal
+keyGesturePress :: ToggleButton -> IORef KeyData -> Word32 -> EventKey -> IO ()
+keyGesturePress b d key_value e = do
+  k <- getEventKeyKeyval e
   case k of
     x | x == key_value -> return ()
     _ -> mzero
-  lift $ updateKey b d $ set kdGesture True
+  updateKey b d $ set kdGesture True
 
-keyGestureRelease :: ToggleButton -> IORef KeyData -> Word32 -> EventM EKey ()
-keyGestureRelease b d key_value = do
-  k <- eventKeyVal
+keyGestureRelease :: ToggleButton -> IORef KeyData -> Word32 -> EventKey -> IO ()
+keyGestureRelease b d key_value e = do
+  k <- getEventKeyKeyval e
   case k of
     x | x == key_value -> return ()
     _ -> mzero
-  lift $ updateKey b d $ set kdGesture False
+  updateKey b d $ set kdGesture False
 
 resetCpu :: IORef UIData -> IO ()
 resetCpu d = modifyIORef' d $ over (dComputer . computer) $ setPC 0
 
+tryEvent :: IO () -> IO Bool
+tryEvent handler
+  = (flip $ catchJust $ \e -> if isUserError e && ioeGetErrorString e == "mzero" then Just () else Nothing) (const $ return False)
+  $ (flip catch) (\e -> let _ = e :: PatternMatchFail in return False)
+  $ handler >> return True
+
 gmevm :: IO ()
 gmevm = do
-  void initGUI
+  a0 <- getProgName
+  av <- getArgs
+  _ <- K.init $ Just $ ST.pack <$> (a0 : av)
   ui <- buildUI =<< getDataFileName "ui.glade"
-  void $ on (uiWindow ui) deleteEvent $ tryEvent $ lift mainQuit
+  void $ onWidgetDeleteEvent (uiWindow ui) $ \_ -> mainQuit >> return True
   V.forM_ (uiKeys ui) $ \k -> do
     kd <- newIORef $ KeyData False False False False
-    void $ on k buttonPressEvent $ tryEvent $ buttonPress k kd
-    void $ on k buttonReleaseEvent $ tryEvent $ buttonRelease k kd
-    void $ on k keyPressEvent $ tryEvent $ keyPress k kd
-    void $ on k keyReleaseEvent $ tryEvent $ keyRelease k kd
-    code :: Word32 <- (read . fromMaybe "0") <$> K.get k widgetName
-    void $ on (uiWindow ui) keyPressEvent $ tryEvent $ keyGesturePress k kd code
-    void $ on (uiWindow ui) keyReleaseEvent $ tryEvent $ keyGestureRelease k kd code
+    void $ onWidgetButtonPressEvent k $ \e -> tryEvent $ buttonPress k kd e
+    void $ onWidgetButtonReleaseEvent k $ \e -> tryEvent $ buttonRelease k kd e
+    void $ onWidgetKeyPressEvent k $ \e -> tryEvent $ keyPress k kd e
+    void $ onWidgetKeyReleaseEvent k $ \e -> tryEvent $ keyRelease k kd e
+    code :: Word32 <- (read . ST.unpack) <$> widgetGetName k
+    void $ onWidgetKeyPressEvent (uiWindow ui) $ \e -> tryEvent $ keyGesturePress k kd code e
+    void $ onWidgetKeyReleaseEvent (uiWindow ui) $ \e -> tryEvent $ keyGestureRelease k kd code e
   let comp = initPorts $ setProgram monitor initComputer
   t <- getTime Monotonic
   d <- newIORef $ UIData comp t 0
-  void $ on (uiReset ui) buttonActivated $ resetCpu d
-  _ <- timeoutAdd (frame ui d >> return True) $ round (1000.0 / fps)
+  void $ onButtonClicked (uiReset ui) $ resetCpu d
+  _ <- timeoutAdd PRIORITY_HIGH (round $ 1000.0 / fps) (frame ui d >> return True)
   widgetShowAll (uiWindow ui)
-  mainGUI
+  K.main

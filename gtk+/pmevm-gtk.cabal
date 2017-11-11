@@ -21,7 +21,9 @@ library
   build-depends: base >= 4.7 && < 5
                , pmevm-backend
                , clock
-               , gtk3
+               , gi-gdk
+               , gi-glib
+               , gi-gtk
                , lens
                , text
                , transformers
@@ -122,7 +124,9 @@ test-suite pmevm-gtk-test
                , HUnit
                , pmevm-gtk
                , clock
-               , gtk3
+               , gi-gdk
+               , gi-glib
+               , gi-gtk
                , lens
                , text
                , transformers
