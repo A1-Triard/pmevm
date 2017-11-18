@@ -5,10 +5,10 @@ description: Simpliest microcomputer emulator.
 homepage: https://github.com/A1-Triard/pmevm-backend#readme
 license: Apache
 license-file: LICENSE
-author: Warlock
-maintainer: internalmike@gmail.com
-copyright: 2017 Warlock
-category: Web
+author: Warlock <internalmike@gmail.com>
+maintainer: Warlock <internalmike@gmail.com>
+copyright: 2017 Warlock <internalmike@gmail.com>
+category: Desktop
 build-type: Simple
 -- extra-source-files:
 cabal-version: >=1.10
@@ -75,7 +75,6 @@ test-suite pmevm-backend-test
                , lens
                , text
                , vector
-  ghc-options: -threaded -rtsopts -with-rtsopts=-N
   default-extensions: CPP
                     , TemplateHaskell
                     , ViewPatterns
