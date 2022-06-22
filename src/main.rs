@@ -37,12 +37,13 @@ mod no_std {
 use alloc::string::ToString;
 use core::cmp::min;
 use pmevm_backend::{Computer, Keyboard};
+use pmevm_backend::Key as MKey;
 use timer_no_std::{MonoTime, sleep_ms_u16};
 use tuifw_screen::{Attr, Color, Point, Range1d, Rect, Thickness, Vector};
 use tuifw_window::{RenderPort, Window, WindowTree};
 
 struct Pmevm {
-    cpu_frequency_k_hz: u16,
+    cpu_frequency_100_k_hz: u16,
     fps: u16,
     computer: Computer,
     keyboard: Keyboard,
@@ -64,6 +65,13 @@ fn render_box(bounds: Rect, port: &mut RenderPort) {
     port.out(bounds.br_inner(), Color::White, None, Attr::empty(), "╝");
 }
 
+fn render_key(key: MKey, text: &str, port: &mut RenderPort) {
+    let row: i16 = (3 - (key as u8) / 4).into();
+    let col: i16 = ((key as u8) % 4).into();
+    let offset = Vector { x: 10 * col, y: 5 * row };
+    render_box(Rect { tl: Point { x: 3, y: 3 }.offset(offset), size: Vector { x: 4, y: 3 } }, port);
+}
+
 fn render(
     _tree: &WindowTree<Pmevm>,
     window: Option<Window>,
@@ -73,13 +81,15 @@ fn render(
     debug_assert!(window.is_none());
     port.fill(|port, p| port.out(p, Color::White, None, Attr::empty(), " "));
     render_box(Rect { tl: Point { x: 10, y: 10 }, size: Vector { x: 20, y: 10 } }, port);
-    port.out(Point { x: 0, y: 0 }, Color::Blue, None, Attr::empty(), &pmevm.cpu_frequency_k_hz.to_string());
+    port.out(Point { x: 0, y: 0 }, Color::Blue, None, Attr::empty(), &pmevm.cpu_frequency_100_k_hz.to_string());
     port.out(Point { x: 0, y: 1 }, Color::Blue, None, Attr::empty(), &pmevm.fps.to_string());
+    render_key(MKey::K0, "0", port);
+    render_key(MKey::K1, "1", port);
 }
 
-const FPS: u16 = 50;
-const MAX_CPU_FREQUENCY_K_HZ: u16 = 1000;
-const MAX_TICKS_BALANCE: i32 = 50000;
+const FPS: u16 = 40;
+const MAX_CPU_FREQUENCY_100_K_HZ: u16 = 100;
+const MAX_TICKS_BALANCE: i32 = 5000 * MAX_CPU_FREQUENCY_100_K_HZ as u32 as i32;
 
 #[start]
 fn main(_: isize, _: *const *const u8) -> isize {
@@ -88,7 +98,7 @@ fn main(_: isize, _: *const *const u8) -> isize {
     let mut pmevm = Pmevm {
         computer: Computer::new(),
         keyboard: Keyboard::new(),
-        cpu_frequency_k_hz: 0,
+        cpu_frequency_100_k_hz: 0,
         fps: 0,
     };
     let mut time = MonoTime::get();
@@ -101,12 +111,14 @@ fn main(_: isize, _: *const *const u8) -> isize {
         debug_assert!(ticks_balance <= 0 && ticks_balance >= -i32::from(u8::MAX));
         assert!(MAX_TICKS_BALANCE >= 0 && i32::MAX - MAX_TICKS_BALANCE > u8::MAX.into());
         let max_ticks_balance_delta = MAX_TICKS_BALANCE - ticks_balance;
-        let ticks_balance_delta = (cpu_ms as u32) * (MAX_CPU_FREQUENCY_K_HZ as u32);
+        let ticks_balance_delta = (cpu_ms as u32) * ((100 * MAX_CPU_FREQUENCY_100_K_HZ) as u32);
         let ticks_balance_delta = if ticks_balance_delta <= max_ticks_balance_delta as u32 {
-            pmevm.cpu_frequency_k_hz = MAX_CPU_FREQUENCY_K_HZ;
+            pmevm.cpu_frequency_100_k_hz = MAX_CPU_FREQUENCY_100_K_HZ;
             ticks_balance_delta as i32
         } else {
-            pmevm.cpu_frequency_k_hz = (max_ticks_balance_delta as u32 / cpu_ms as u32) as u16;
+            let cpu_frequency_100_k_hz = (max_ticks_balance_delta as u32 / cpu_ms as u32) as u16 / 100;
+            assert!(u16::MAX / MAX_CPU_FREQUENCY_100_K_HZ > 256);
+            pmevm.cpu_frequency_100_k_hz = (255 * pmevm.cpu_frequency_100_k_hz + cpu_frequency_100_k_hz) / 256;
             max_ticks_balance_delta
         };
         ticks_balance += ticks_balance_delta;
