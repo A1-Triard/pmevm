@@ -168,7 +168,7 @@ pub enum Op {
 }
 
 impl Op {
-    fn ticks(self, psw: Psw) -> u64 {
+    fn ticks(self, psw: Psw) -> u8 {
         match self {
             Op::Inr(OpReg::M) => 10,
             Op::Inr(_) => 5,
@@ -932,7 +932,7 @@ impl Op {
 }
 
 impl Computer {
-    pub fn step(&mut self) -> u64 {
+    pub fn step(&mut self) -> u8 {
         let op: Op = self.load_byte().into();
         let ticks = op.ticks(self.cpu.psw);
         op.execute(self);
