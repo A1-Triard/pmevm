@@ -88,7 +88,7 @@ fn render(
 }
 
 const FPS: u16 = 40;
-const MAX_CPU_FREQUENCY_100_K_HZ: u16 = 100;
+const MAX_CPU_FREQUENCY_100_K_HZ: u16 = 10;
 const MAX_TICKS_BALANCE: i32 = 5000 * MAX_CPU_FREQUENCY_100_K_HZ as u32 as i32;
 
 #[start]
@@ -117,8 +117,8 @@ fn main(_: isize, _: *const *const u8) -> isize {
             ticks_balance_delta as i32
         } else {
             let cpu_frequency_100_k_hz = (max_ticks_balance_delta as u32 / cpu_ms as u32) as u16 / 100;
-            assert!(u16::MAX / MAX_CPU_FREQUENCY_100_K_HZ > 256);
-            pmevm.cpu_frequency_100_k_hz = (255 * pmevm.cpu_frequency_100_k_hz + cpu_frequency_100_k_hz) / 256;
+            assert!(MAX_CPU_FREQUENCY_100_K_HZ != 0 && u16::MAX / MAX_CPU_FREQUENCY_100_K_HZ > 8);
+            pmevm.cpu_frequency_100_k_hz = (7 * pmevm.cpu_frequency_100_k_hz + cpu_frequency_100_k_hz) / 8;
             max_ticks_balance_delta
         };
         ticks_balance += ticks_balance_delta;
@@ -127,8 +127,8 @@ fn main(_: isize, _: *const *const u8) -> isize {
             ticks_balance -= i32::from(pmevm.computer.step());
         }
         let ms = time.split_ms_u16().unwrap_or(u16::MAX);
-        assert!(u16::MAX / FPS > 5);
-        pmevm.fps = (4 * pmevm.fps + min(FPS, 1000 / ms)) / 5;
+        assert!(FPS != 0 && u16::MAX / FPS > 8);
+        pmevm.fps = (7 * pmevm.fps + min(FPS, 1000u16.checked_div(ms).unwrap_or(FPS)) + 4) / 8;
         sleep_ms_u16((1000 / FPS).saturating_sub(ms));
     }
 }
