@@ -35,6 +35,7 @@ mod no_std {
 }
 
 use alloc::string::ToString;
+use core::cmp::min;
 use pmevm_backend::{Computer, Keyboard};
 use timer_no_std::{MonoTime, sleep_ms_u16};
 use tuifw_screen::{Attr, Color, Point, Range1d, Rect, Thickness, Vector};
@@ -42,6 +43,7 @@ use tuifw_window::{RenderPort, Window, WindowTree};
 
 struct Pmevm {
     cpu_frequency_k_hz: u16,
+    fps: u16,
     computer: Computer,
     keyboard: Keyboard,
 }
@@ -72,6 +74,7 @@ fn render(
     port.fill(|port, p| port.out(p, Color::White, None, Attr::empty(), " "));
     render_box(Rect { tl: Point { x: 10, y: 10 }, size: Vector { x: 20, y: 10 } }, port);
     port.out(Point { x: 0, y: 0 }, Color::Blue, None, Attr::empty(), &pmevm.cpu_frequency_k_hz.to_string());
+    port.out(Point { x: 0, y: 1 }, Color::Blue, None, Attr::empty(), &pmevm.fps.to_string());
 }
 
 const FPS: u16 = 50;
@@ -86,6 +89,7 @@ fn main(_: isize, _: *const *const u8) -> isize {
         computer: Computer::new(),
         keyboard: Keyboard::new(),
         cpu_frequency_k_hz: 0,
+        fps: 0,
     };
     let mut time = MonoTime::get();
     let mut cpu_time = time;
@@ -111,6 +115,8 @@ fn main(_: isize, _: *const *const u8) -> isize {
             ticks_balance -= i32::from(pmevm.computer.step());
         }
         let ms = time.split_ms_u16().unwrap_or(u16::MAX);
+        assert!(u16::MAX / FPS > 5);
+        pmevm.fps = (4 * pmevm.fps + min(FPS, 1000 / ms)) / 5;
         sleep_ms_u16((1000 / FPS).saturating_sub(ms));
     }
 }
