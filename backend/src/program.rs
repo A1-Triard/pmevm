@@ -64,9 +64,9 @@ macro_rules! program {
         $crate::Program(&[
             $($(
                 $crate::ProgramLine {
-                    addr_hi: $crate::octal($addr_hi),
-                    addr_low: $crate::octal($addr_low),
-                    code: $crate::octal($code),
+                    addr_hi: $crate::octal(#[allow(clippy::zero_prefixed_literal)] $addr_hi),
+                    addr_low: $crate::octal(#[allow(clippy::zero_prefixed_literal)] $addr_low),
+                    code: $crate::octal(#[allow(clippy::zero_prefixed_literal)] $code),
                     mnemonic: $mnemonic
                 }
             ),+)?

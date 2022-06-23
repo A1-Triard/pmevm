@@ -4,6 +4,7 @@
 #![feature(start)]
 
 #![deny(warnings)]
+#![allow(clippy::assertions_on_constants)]
 
 #![windows_subsystem="console"]
 #![no_std]
@@ -92,7 +93,7 @@ fn render_led(on: bool, p: Point, rp: &mut RenderPort) {
 fn render_led_line(mut display: u8, mut p: Point, rp: &mut RenderPort) {
     for _ in 0 .. 8 {
         render_led(display & 0x01 != 0, p, rp);
-        display = display >> 1;
+        display >>= 1;
         p = p.offset(Vector { x: -3, y: 0 });
     }
 }
@@ -219,11 +220,11 @@ fn main(_: isize, _: *const *const u8) -> isize {
     let mut keyboard_time = [None; 16];
     let mut ticks_balance: i32 = 0;
     loop {
-        for key in 0 .. 16 {
-            let release = keyboard_time[key]
+        for (key, key_time) in keyboard_time.iter_mut().enumerate() {
+            let release = key_time
                 .map_or(false, |x| MonoTime::get().delta_ms_u8(x).map_or(true, |x| x != 0));
             if release {
-                keyboard_time[key] = None;
+                *key_time = None;
                 pmevm.keyboard.set(MKey::n(key as u8).unwrap(), false);
             }
         }

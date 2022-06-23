@@ -1,3 +1,4 @@
+#![feature(const_trait_impl)]
 #![feature(generic_arg_infer)]
 #![feature(trait_alias)]
 

@@ -6,7 +6,7 @@ use enumn::N;
 struct Psw(u8);
 
 impl Psw {
-    fn new(code: u8) -> Psw {
+    const fn new(code: u8) -> Psw {
         Psw(code | 0x02 & !0x08 & !0x20)
     }
 
@@ -487,7 +487,7 @@ impl Computer {
 }
 
 impl Cpu {
-    fn new() -> Cpu {
+    const fn new() -> Cpu {
         Cpu {
             halted: false,
             interrupts_enabled: true,
@@ -514,8 +514,12 @@ pub struct Computer {
     ports: [Port; (u8::MAX as u16 + 1) as usize],
 }
 
+impl const Default for Computer {
+    fn default() -> Computer { Computer::new() }
+}
+
 impl Computer {
-    pub fn new() -> Computer {
+    pub const fn new() -> Computer {
         Computer {
             cpu: Cpu::new(),
             mem: Memory([0; _], [0; _]),
@@ -658,11 +662,11 @@ impl Op {
                 let mut l = (computer.cpu.a & 0x0F) | (aux << 4);
                 let mut h = ((computer.cpu.a >> 4) | carry).wrapping_sub(aux);
                 let aux = l / 10 != 0;
-                l = l % 10;
+                l %= 10;
                 computer.cpu.psw.set_aux_carry(aux);
-                h = h + aux as u8;
+                h += aux as u8;
                 let carry = h / 10 != 0;
-                h = h % 10;
+                h %= 10;
                 computer.cpu.psw.set_carry(carry);
                 computer.cpu.a = (h << 4) | l;
                 computer.cpu.psw.check(computer.cpu.a);
@@ -751,7 +755,7 @@ impl Op {
                 let d = computer.load_byte();
                 computer.cpu.psw.set_aux_carry(false);
                 computer.cpu.psw.set_carry(false);
-                computer.cpu.a = computer.cpu.a & d;
+                computer.cpu.a &= d;
                 computer.cpu.psw.check(computer.cpu.a);
                 computer.cpu.pc = computer.cpu.pc.wrapping_add(2);
             },
@@ -759,7 +763,7 @@ impl Op {
                 let d = computer.load_byte();
                 computer.cpu.psw.set_aux_carry(false);
                 computer.cpu.psw.set_carry(false);
-                computer.cpu.a = computer.cpu.a ^ d;
+                computer.cpu.a ^= d;
                 computer.cpu.psw.check(computer.cpu.a);
                 computer.cpu.pc = computer.cpu.pc.wrapping_add(2);
             },
@@ -767,7 +771,7 @@ impl Op {
                 let d = computer.load_byte();
                 computer.cpu.psw.set_aux_carry(false);
                 computer.cpu.psw.set_carry(false);
-                computer.cpu.a = computer.cpu.a | d;
+                computer.cpu.a |= d;
                 computer.cpu.psw.check(computer.cpu.a);
                 computer.cpu.pc = computer.cpu.pc.wrapping_add(2);
             },
@@ -817,7 +821,7 @@ impl Op {
                 let d = computer.reg(r);
                 computer.cpu.psw.set_aux_carry(false);
                 computer.cpu.psw.set_carry(false);
-                computer.cpu.a = computer.cpu.a & d;
+                computer.cpu.a &= d;
                 computer.cpu.psw.check(computer.cpu.a);
                 computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
             },
@@ -825,7 +829,7 @@ impl Op {
                 let d = computer.reg(r);
                 computer.cpu.psw.set_aux_carry(false);
                 computer.cpu.psw.set_carry(false);
-                computer.cpu.a = computer.cpu.a ^ d;
+                computer.cpu.a ^= d;
                 computer.cpu.psw.check(computer.cpu.a);
                 computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
             },
@@ -833,7 +837,7 @@ impl Op {
                 let d = computer.reg(r);
                 computer.cpu.psw.set_aux_carry(false);
                 computer.cpu.psw.set_carry(false);
-                computer.cpu.a = computer.cpu.a | d;
+                computer.cpu.a |= d;
                 computer.cpu.psw.check(computer.cpu.a);
                 computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
             },

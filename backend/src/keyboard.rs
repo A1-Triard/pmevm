@@ -13,8 +13,12 @@ pub enum Key {
 #[derive(Debug, Clone, Copy)]
 pub struct Keyboard(u16);
 
+impl const Default for Keyboard {
+    fn default() -> Keyboard { Keyboard::new() }
+}
+
 impl Keyboard {
-    pub fn new() -> Keyboard {
+    pub const fn new() -> Keyboard {
         Keyboard(0)
     }
 
