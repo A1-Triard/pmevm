@@ -1,1 +1,3 @@
-# pmevm-gtk
+# PM-EVM
+
+Simpliest microcomputer emulator.
