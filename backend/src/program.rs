@@ -20,12 +20,12 @@ impl Display for ProgramLine {
 }
 
 pub trait ComputerProgramExt {
-    fn poke_program(&mut self, lines: impl Iterator<Item=ProgramLine>);
+    fn poke_program<'a>(&mut self, lines: impl IntoIterator<Item=&'a ProgramLine>);
 }
 
 impl ComputerProgramExt for Computer {
-    fn poke_program(&mut self, lines: impl Iterator<Item=ProgramLine>) {
-        for line in lines {
+    fn poke_program<'a>(&mut self, lines: impl IntoIterator<Item=&'a ProgramLine>) {
+        for line in lines.into_iter() {
             self.poke(((line.addr_hi as u16) << 8) | (line.addr_low as u16), line.code);
         }
     }

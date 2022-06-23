@@ -39,10 +39,10 @@ use core::cmp::min;
 use core::fmt::{self, Write};
 use core::mem::replace;
 use core::str::{self};
-use pmevm_backend::{Computer, Keyboard};
+use pmevm_backend::{MONITOR, Computer, ComputerProgramExt, Keyboard};
 use pmevm_backend::Key as MKey;
 use timer_no_std::{MonoTime, sleep_ms_u16};
-use tuifw_screen::{Attr, Color, Point, Range1d, Rect, Thickness, Vector};
+use tuifw_screen::{Attr, Color, Event, Key, Point, Range1d, Rect, Thickness, Vector};
 use tuifw_window::{RenderPort, Window, WindowTree};
 
 struct Buf<const LEN: usize> {
@@ -92,14 +92,14 @@ fn render_led_line(mut display: u8, mut p: Point, rp: &mut RenderPort) {
     for _ in 0 .. 8 {
         render_led(display & 0x01 != 0, p, rp);
         display = display >> 1;
-        p = p.offset(Vector { x: 3, y: 0 });
+        p = p.offset(Vector { x: -3, y: 0 });
     }
 }
 
 fn render_leds(computer: &Computer, mut p: Point, rp: &mut RenderPort) {
     for port in 0 .. 3 {
         render_led_line(computer.peek_port(port), p, rp);
-        p = p.offset(Vector { x: 0, y: 3 });
+        p = p.offset(Vector { x: 0, y: -3 });
     }
 }
 
@@ -184,14 +184,15 @@ fn render(
 ) {
     debug_assert!(window.is_none());
     rp.fill(|rp, p| rp.out(p, Color::White, None, Attr::empty(), " "));
-    render_leds(&pmevm.computer, Point { x: 47, y: 8 }, rp);
+    render_leds(&pmevm.computer, Point { x: 68, y: 14 }, rp);
     render_switch(true, Point { x: 34, y: 9 }, rp);
     render_reset(Point { x: 34, y: 7 }, rp);
     render_m_cycle(Point { x: 34, y: 16 }, rp);
     render_keys(Point { x: 7, y: 7 }, rp);
     render_box(Point { x: 4, y: 5 }, rp);
-    render_cpu_frequency(pmevm.cpu_frequency_100_k_hz, Point { x: 66, y: 16 }, rp);
-    //rp.out(Point { x: 0, y: 1 }, Color::Blue, None, Attr::empty(), &pmevm.fps.to_string());
+    if !pmevm.computer.is_cpu_halted() {
+        render_cpu_frequency(pmevm.cpu_frequency_100_k_hz, Point { x: 66, y: 16 }, rp);
+    }
 }
 
 const FPS: u16 = 40;
@@ -208,11 +209,31 @@ fn main(_: isize, _: *const *const u8) -> isize {
         cpu_frequency_100_k_hz: 0,
         fps: 0,
     };
+    pmevm.computer.poke_program(MONITOR.0);
     let mut time = MonoTime::get();
     let mut cpu_time = time;
+    let mut keyboard_time = [None; 16];
     let mut ticks_balance: i32 = 0;
     loop {
-        let _ = WindowTree::update(&mut windows, false, &mut pmevm).unwrap();
+        for key in 0 .. 16 {
+            let release = keyboard_time[key]
+                .map_or(false, |x| MonoTime::get().delta_ms_u8(x).map_or(true, |x| x >= 50));
+            if release {
+                keyboard_time[key] = None;
+                pmevm.keyboard.set(MKey::n(key as u8).unwrap(), false);
+            }
+        }
+        if let Some(key) = WindowTree::update(&mut windows, false, &mut pmevm).unwrap() {
+            let m_key = match key {
+                Event::Key(_, Key::Char('0')) => Some(MKey::K0),
+                Event::Key(_, Key::Char('1')) => Some(MKey::K1),
+                _ => None,
+            };
+            if let Some(m_key) = m_key {
+                pmevm.keyboard.set(m_key, true);
+                keyboard_time[m_key as u8 as usize] = Some(MonoTime::get());
+            }
+        }
         windows.invalidate_screen();
         let cpu_ms = cpu_time.split_ms_u16().unwrap_or(u16::MAX);
         debug_assert!(ticks_balance <= 0 && ticks_balance >= -i32::from(u8::MAX));
@@ -231,7 +252,11 @@ fn main(_: isize, _: *const *const u8) -> isize {
         ticks_balance += ticks_balance_delta;
         while ticks_balance > 0 {
             pmevm.keyboard.step(&mut pmevm.computer);
-            ticks_balance -= i32::from(pmevm.computer.step());
+            if let Some(cpu_ticks) = pmevm.computer.step() {
+                ticks_balance -= i32::from(cpu_ticks);
+            } else {
+                ticks_balance = 0;
+            };
         }
         let ms = time.split_ms_u16().unwrap_or(u16::MAX);
         assert!(FPS != 0 && u16::MAX / FPS > 8);

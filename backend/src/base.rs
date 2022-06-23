@@ -539,7 +539,7 @@ impl Computer {
         self.ports[port as usize].in_ = b;
     }
 
-    pub fn is_halted(&self) -> bool {
+    pub fn is_cpu_halted(&self) -> bool {
         self.cpu.halted
     }
 
@@ -601,7 +601,6 @@ impl Op {
             a
         }
 
-        if computer.cpu.halted { return; }
         match self {
             Op::Shld => {
                 let addr = computer.load_word();
@@ -932,10 +931,11 @@ impl Op {
 }
 
 impl Computer {
-    pub fn step(&mut self) -> u8 {
-        let op: Op = self.load_byte().into();
+    pub fn step(&mut self) -> Option<u8> {
+        if self.cpu.halted { return None; }
+        let op: Op = self.mem.get(self.cpu.pc).into();
         let ticks = op.ticks(self.cpu.psw);
         op.execute(self);
-        ticks
+        Some(ticks)
     }
 }
