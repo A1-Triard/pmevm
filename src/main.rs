@@ -234,6 +234,10 @@ fn main(_: isize, _: *const *const u8) -> isize {
                 Event::Key(_, Key::Char('5')) => Some(MKey::K5),
                 Event::Key(_, Key::Char('6')) => Some(MKey::K6),
                 Event::Key(_, Key::Char('7')) => Some(MKey::K7),
+                Event::Key(_, Key::Char('h')) => Some(MKey::K8),
+                Event::Key(_, Key::Char('l')) => Some(MKey::K9),
+                Event::Key(_, Key::Char('e')) => Some(MKey::KA),
+                Event::Key(_, Key::Char('r')) => Some(MKey::KB),
                 _ => None,
             };
             if let Some(m_key) = m_key {
