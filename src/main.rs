@@ -42,7 +42,8 @@ use core::str::{self};
 use pmevm_backend::{MONITOR, Computer, ComputerProgramExt, Keyboard};
 use pmevm_backend::Key as MKey;
 use timer_no_std::{MonoTime, sleep_ms_u16};
-use tuifw_screen::{Attr, Color, Event, Key, Point, Range1d, Rect, Thickness, Vector};
+use tuifw_screen::{Attr, Color, Event, HAlign, Key, Point};
+use tuifw_screen::{Range1d, Rect, Thickness, VAlign, Vector};
 use tuifw_window::{RenderPort, Window, WindowTree};
 
 struct Buf<const LEN: usize> {
@@ -133,13 +134,13 @@ fn render_m_cycle(p: Point, rp: &mut RenderPort) {
 fn render_key(text: &str, p: Point, rp: &mut RenderPort) {
     rp.out(
         p.offset(Vector { x: 0, y: -1 }),
-        Color::White, Some(Color::Black), Attr::empty(),
+        Color::White, None, Attr::empty(),
         "▄▄▄▄"
     );
     rp.out(p, Color::Black, Some(Color::White), Attr::empty(), text);
     rp.out(
         p.offset(Vector { x: 0, y: 1 }),
-        Color::White, Some(Color::Black), Attr::empty(),
+        Color::White, None, Attr::empty(),
         "▀▀▀▀"
     );
 }
@@ -177,21 +178,24 @@ fn render_cpu_frequency(cpu_frequency_100_k_hz: u16, p: Point, rp: &mut RenderPo
 }
 
 fn render(
-    _tree: &WindowTree<Pmevm>,
+    tree: &WindowTree<Pmevm>,
     window: Option<Window>,
     rp: &mut RenderPort,
     pmevm: &mut Pmevm,
 ) {
     debug_assert!(window.is_none());
     rp.fill(|rp, p| rp.out(p, Color::White, None, Attr::empty(), " "));
-    render_leds(&pmevm.computer, Point { x: 68, y: 14 }, rp);
-    render_switch(true, Point { x: 34, y: 9 }, rp);
-    render_reset(Point { x: 34, y: 7 }, rp);
-    render_m_cycle(Point { x: 34, y: 16 }, rp);
-    render_keys(Point { x: 7, y: 7 }, rp);
-    render_box(Point { x: 4, y: 5 }, rp);
+    let screen_size = tree.screen_size();
+    let margin = Thickness::align(Vector { x: 71, y: 14 }, screen_size, HAlign::Center, VAlign::Center);
+    let p = margin.shrink_rect(Rect { tl: Point { x: 0, y: 0 }, size: screen_size }).tl;
+    render_leds(&pmevm.computer, p.offset(Vector { x: 64, y: 9 }), rp);
+    render_switch(true, p.offset(Vector { x: 30, y: 4 }), rp);
+    render_reset(p.offset(Vector { x: 30, y: 2 }), rp);
+    render_m_cycle(p.offset(Vector { x: 30, y: 11 }), rp);
+    render_keys(p.offset(Vector { x: 3, y: 2 }), rp);
+    render_box(p, rp);
     if !pmevm.computer.is_cpu_halted() {
-        render_cpu_frequency(pmevm.cpu_frequency_100_k_hz, Point { x: 66, y: 16 }, rp);
+        render_cpu_frequency(pmevm.cpu_frequency_100_k_hz, p.offset(Vector { x: 62, y: 11 }), rp);
     }
 }
 
@@ -226,6 +230,10 @@ fn main(_: isize, _: *const *const u8) -> isize {
         if let Some(event) = WindowTree::update(&mut windows, false, &mut pmevm).unwrap() {
             if matches!(event, Event::Key(_, Key::Escape)) { break; }
             let m_key = match event {
+                Event::Key(_, Key::Backspace) => {
+                    pmevm.computer.reset();
+                    None
+                },
                 Event::Key(_, Key::Char('0')) => Some(MKey::K0),
                 Event::Key(_, Key::Char('1')) => Some(MKey::K1),
                 Event::Key(_, Key::Char('2')) => Some(MKey::K2),

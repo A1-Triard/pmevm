@@ -523,6 +523,10 @@ impl Computer {
         }
     }
 
+    pub fn reset(&mut self) {
+        self.cpu.pc = 0;
+    }
+
     pub fn peek(&self, addr: u16) -> u8 {
         self.mem.get(addr)
     }
