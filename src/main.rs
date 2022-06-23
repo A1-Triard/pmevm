@@ -1,4 +1,5 @@
 #![feature(default_alloc_error_handler)]
+#![feature(generic_arg_infer)]
 #![feature(lang_items)]
 #![feature(start)]
 
@@ -34,13 +35,30 @@ mod no_std {
     extern fn rust_eh_unregister_frames () { }
 }
 
-use alloc::string::ToString;
 use core::cmp::min;
+use core::fmt::{self, Write};
+use core::mem::replace;
+use core::str::{self};
 use pmevm_backend::{Computer, Keyboard};
 use pmevm_backend::Key as MKey;
 use timer_no_std::{MonoTime, sleep_ms_u16};
 use tuifw_screen::{Attr, Color, Point, Range1d, Rect, Thickness, Vector};
 use tuifw_window::{RenderPort, Window, WindowTree};
+
+struct Buf<const LEN: usize> {
+    bytes: [u8; LEN],
+    offset: usize,
+}
+
+impl<const LEN: usize> Write for Buf<LEN> {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        let buf = &mut self.bytes[self.offset ..];
+        if s.len() > buf.len() { return Err(fmt::Error); }
+        (&mut buf[.. s.len()]).copy_from_slice(s.as_bytes());
+        self.offset += s.len();
+        Ok(())
+    }
+}
 
 struct Pmevm {
     cpu_frequency_100_k_hz: u16,
@@ -49,7 +67,8 @@ struct Pmevm {
     keyboard: Keyboard,
 }
 
-fn render_box(bounds: Rect, port: &mut RenderPort) {
+fn render_box(p: Point, port: &mut RenderPort) {
+    let bounds = Rect { tl: p, size: Vector { x: 71, y: 14 } };
     let inner = Thickness::all(1).shrink_rect(bounds);
     for x in Range1d::new(inner.l(), inner.r()) {
         port.out(Point { x, y: bounds.t() }, Color::White, None, Attr::empty(), "═");
@@ -65,26 +84,114 @@ fn render_box(bounds: Rect, port: &mut RenderPort) {
     port.out(bounds.br_inner(), Color::White, None, Attr::empty(), "╝");
 }
 
-fn render_key(key: MKey, text: &str, port: &mut RenderPort) {
-    let row: i16 = (3 - (key as u8) / 4).into();
-    let col: i16 = ((key as u8) % 4).into();
-    let offset = Vector { x: 10 * col, y: 5 * row };
-    render_box(Rect { tl: Point { x: 3, y: 3 }.offset(offset), size: Vector { x: 4, y: 3 } }, port);
+fn render_led(on: bool, p: Point, rp: &mut RenderPort) {
+    rp.out(p, Color::White, None, Attr::empty(), if on { "██" } else { "──" });
+}
+
+fn render_led_line(mut display: u8, mut p: Point, rp: &mut RenderPort) {
+    for _ in 0 .. 8 {
+        render_led(display & 0x01 != 0, p, rp);
+        display = display >> 1;
+        p = p.offset(Vector { x: 3, y: 0 });
+    }
+}
+
+fn render_leds(computer: &Computer, mut p: Point, rp: &mut RenderPort) {
+    for port in 0 .. 3 {
+        render_led_line(computer.peek_port(port), p, rp);
+        p = p.offset(Vector { x: 0, y: 3 });
+    }
+}
+
+fn render_switch(on: bool, p: Point, rp: &mut RenderPort) {
+    rp.out(p, Color::White, None, Attr::empty(), "┌─┐");
+    rp.out(p.offset(Vector { x: 0, y: 1 }), Color::White, None, Attr::empty(),
+        if on { "│█│" } else { "│ │" }
+    );
+    rp.out(p.offset(Vector { x: 0, y: 2 }), Color::White, None, Attr::empty(),
+        if on { "│▀│" } else { "│ │" }
+    );
+    rp.out(p.offset(Vector { x: 0, y: 3 }), Color::White, None, Attr::empty(),
+        if on { "│ │" } else { "│▄│" }
+    );
+    rp.out(p.offset(Vector { x: 0, y: 4 }), Color::White, None, Attr::empty(),
+        if on { "│ │" } else { "│█│" }
+    );
+    rp.out(p.offset(Vector { x: 0, y: 5 }), Color::White, None, Attr::empty(), "└─┘");
+    rp.out(p.offset(Vector { x: 4, y: 1 }), Color::White, None, Attr::empty(), "Auto");
+    rp.out(p.offset(Vector { x: 4, y: 4 }), Color::White, None, Attr::empty(), "Step");
+}
+
+fn render_reset(p: Point, rp: &mut RenderPort) {
+    rp.out(p, Color::Black, Some(Color::White), Attr::empty(), "  Reset  ");
+}
+
+fn render_m_cycle(p: Point, rp: &mut RenderPort) {
+    rp.out(p, Color::Black, Some(Color::White), Attr::empty(), " M.Cycle ");
+}
+
+fn render_key(text: &str, p: Point, rp: &mut RenderPort) {
+    rp.out(
+        p.offset(Vector { x: 0, y: -1 }),
+        Color::White, Some(Color::Black), Attr::empty(),
+        "▄▄▄▄"
+    );
+    rp.out(p, Color::Black, Some(Color::White), Attr::empty(), text);
+    rp.out(
+        p.offset(Vector { x: 0, y: 1 }),
+        Color::White, Some(Color::Black), Attr::empty(),
+        "▀▀▀▀"
+    );
+}
+
+fn render_keys(p: Point, rp: &mut RenderPort) {
+    render_key("    ", p, rp);
+    render_key(" HB ", p.offset(Vector { x: 0, y: 3 }), rp);
+    render_key("  4 ", p.offset(Vector { x: 0, y: 6 }), rp);
+    render_key("  0 ", p.offset(Vector { x: 0, y: 9 }), rp);
+    render_key("    ", p.offset(Vector { x: 6, y: 0 }), rp);
+    render_key(" LB ", p.offset(Vector { x: 6, y: 3 }), rp);
+    render_key("  5 ", p.offset(Vector { x: 6, y: 6 }), rp);
+    render_key("  1 ", p.offset(Vector { x: 6, y: 9 }), rp);
+    render_key("    ", p.offset(Vector { x: 12, y: 0 }), rp);
+    render_key("  E ", p.offset(Vector { x: 12, y: 3 }), rp);
+    render_key("  6 ", p.offset(Vector { x: 12, y: 6 }), rp);
+    render_key("  2 ", p.offset(Vector { x: 12, y: 9 }), rp);
+    render_key("    ", p.offset(Vector { x: 18, y: 0 }), rp);
+    render_key("  R ", p.offset(Vector { x: 18, y: 3 }), rp);
+    render_key("  7 ", p.offset(Vector { x: 18, y: 6 }), rp);
+    render_key("  3 ", p.offset(Vector { x: 18, y: 9 }), rp);
+}
+
+fn render_cpu_frequency(cpu_frequency_100_k_hz: u16, p: Point, rp: &mut RenderPort) {
+    let mut buf = Buf { bytes: [0; 6], offset: 0 };
+    write!(buf, "{:02}", cpu_frequency_100_k_hz).unwrap();
+    let text = &mut buf.bytes[.. buf.offset + 1];
+    text[text.len() - 1] = replace(&mut text[text.len() - 2], b'.');
+    rp.out(
+        p.offset(Vector { x: -(text.len() as u16 as i16), y: 0 }),
+        Color::White, None, Attr::empty(),
+        unsafe { str::from_utf8_unchecked(text) }
+    );
+    rp.out(p, Color::White, None, Attr::empty(), " MHz");
 }
 
 fn render(
     _tree: &WindowTree<Pmevm>,
     window: Option<Window>,
-    port: &mut RenderPort,
+    rp: &mut RenderPort,
     pmevm: &mut Pmevm,
 ) {
     debug_assert!(window.is_none());
-    port.fill(|port, p| port.out(p, Color::White, None, Attr::empty(), " "));
-    render_box(Rect { tl: Point { x: 10, y: 10 }, size: Vector { x: 20, y: 10 } }, port);
-    port.out(Point { x: 0, y: 0 }, Color::Blue, None, Attr::empty(), &pmevm.cpu_frequency_100_k_hz.to_string());
-    port.out(Point { x: 0, y: 1 }, Color::Blue, None, Attr::empty(), &pmevm.fps.to_string());
-    render_key(MKey::K0, "0", port);
-    render_key(MKey::K1, "1", port);
+    rp.fill(|rp, p| rp.out(p, Color::White, None, Attr::empty(), " "));
+    render_leds(&pmevm.computer, Point { x: 47, y: 8 }, rp);
+    render_switch(true, Point { x: 34, y: 9 }, rp);
+    render_reset(Point { x: 34, y: 7 }, rp);
+    render_m_cycle(Point { x: 34, y: 16 }, rp);
+    render_keys(Point { x: 7, y: 7 }, rp);
+    render_box(Point { x: 4, y: 5 }, rp);
+    render_cpu_frequency(pmevm.cpu_frequency_100_k_hz, Point { x: 66, y: 16 }, rp);
+    //rp.out(Point { x: 0, y: 1 }, Color::Blue, None, Attr::empty(), &pmevm.fps.to_string());
 }
 
 const FPS: u16 = 40;
