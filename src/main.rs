@@ -222,7 +222,7 @@ fn main(_: isize, _: *const *const u8) -> isize {
     loop {
         for (key, key_time) in keyboard_time.iter_mut().enumerate() {
             let release = key_time
-                .map_or(false, |x| MonoTime::get().delta_ms_u8(x).map_or(true, |x| x != 0));
+                .map_or(false, |x| MonoTime::get().delta_ms_u8(x).map_or(true, |x| x >= 40));
             if release {
                 *key_time = None;
                 pmevm.keyboard.set(MKey::n(key as u8).unwrap(), false);
