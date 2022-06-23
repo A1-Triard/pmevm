@@ -30,30 +30,30 @@ impl Keyboard {
 
     pub fn step(self, computer: &mut Computer) {
         let scan = computer.peek_port(3);
-        let c_0 = scan & 0x08 == 0;
-        let c_1 = scan & 0x04 == 0;
-        let c_2 = scan & 0x02 == 0;
-        let c_3 = scan & 0x01 == 0;
+        let c_0 = scan & 0x08 != 0;
+        let c_1 = scan & 0x04 != 0;
+        let c_2 = scan & 0x02 != 0;
+        let c_3 = scan & 0x01 != 0;
         let r_3 =
-            c_0 && self.get(Key::K0) ||
-            c_1 && self.get(Key::K1) ||
-            c_2 && self.get(Key::K2) ||
-            c_3 && self.get(Key::K3);
+            (c_0 || !self.get(Key::K0)) &&
+            (c_1 || !self.get(Key::K1)) &&
+            (c_2 || !self.get(Key::K2)) &&
+            (c_3 || !self.get(Key::K3));
         let r_2 =
-            c_0 && self.get(Key::K4) ||
-            c_1 && self.get(Key::K5) ||
-            c_2 && self.get(Key::K6) ||
-            c_3 && self.get(Key::K7);
+            (c_0 || !self.get(Key::K4)) &&
+            (c_1 || !self.get(Key::K5)) &&
+            (c_2 || !self.get(Key::K6)) &&
+            (c_3 || !self.get(Key::K7));
         let r_1 =
-            c_0 && self.get(Key::K8) ||
-            c_1 && self.get(Key::K9) ||
-            c_2 && self.get(Key::KA) ||
-            c_3 && self.get(Key::KB);
+            (c_0 || !self.get(Key::K8)) &&
+            (c_1 || !self.get(Key::K9)) &&
+            (c_2 || !self.get(Key::KA)) &&
+            (c_3 || !self.get(Key::KB));
         let r_0 =
-            c_0 && self.get(Key::KC) ||
-            c_1 && self.get(Key::KD) ||
-            c_2 && self.get(Key::KE) ||
-            c_3 && self.get(Key::KF);
+            (c_0 || !self.get(Key::KC)) &&
+            (c_1 || !self.get(Key::KD)) &&
+            (c_2 || !self.get(Key::KE)) &&
+            (c_3 || !self.get(Key::KF));
         let answer = ((r_0 as u8) << 3)  | ((r_1 as u8) << 2) | ((r_2 as u8) << 1) | (r_3 as u8);
         computer.poke_port(3, answer);
     }

@@ -1,16 +1,6 @@
 use crate::program;
 use crate::program::*;
 
-/*
-pub const MONITOR: Program = program! {
-    000 000 076 "          MVI A 002Q        ",
-    000 001 002 "                            ",
-    000 002 323 "          OUT 002Q          ",
-    000 003 002 "                            ",
-    000 004 166 "          HLT               ",
-};
-*/
-
 pub const MONITOR: Program = program! {
     000 000 303 "          JMP M1            ",
     000 001 070 "                            ",

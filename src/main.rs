@@ -3,7 +3,7 @@
 #![feature(lang_items)]
 #![feature(start)]
 
-//#![deny(warnings)]
+#![deny(warnings)]
 
 #![windows_subsystem="console"]
 #![no_std]
@@ -223,10 +223,17 @@ fn main(_: isize, _: *const *const u8) -> isize {
                 pmevm.keyboard.set(MKey::n(key as u8).unwrap(), false);
             }
         }
-        if let Some(key) = WindowTree::update(&mut windows, false, &mut pmevm).unwrap() {
-            let m_key = match key {
+        if let Some(event) = WindowTree::update(&mut windows, false, &mut pmevm).unwrap() {
+            if matches!(event, Event::Key(_, Key::Escape)) { break; }
+            let m_key = match event {
                 Event::Key(_, Key::Char('0')) => Some(MKey::K0),
                 Event::Key(_, Key::Char('1')) => Some(MKey::K1),
+                Event::Key(_, Key::Char('2')) => Some(MKey::K2),
+                Event::Key(_, Key::Char('3')) => Some(MKey::K3),
+                Event::Key(_, Key::Char('4')) => Some(MKey::K4),
+                Event::Key(_, Key::Char('5')) => Some(MKey::K5),
+                Event::Key(_, Key::Char('6')) => Some(MKey::K6),
+                Event::Key(_, Key::Char('7')) => Some(MKey::K7),
                 _ => None,
             };
             if let Some(m_key) = m_key {
@@ -263,4 +270,5 @@ fn main(_: isize, _: *const *const u8) -> isize {
         pmevm.fps = (7 * pmevm.fps + min(FPS, 1000u16.checked_div(ms).unwrap_or(FPS)) + 4) / 8;
         sleep_ms_u16((1000 / FPS).saturating_sub(ms));
     }
+    0
 }
