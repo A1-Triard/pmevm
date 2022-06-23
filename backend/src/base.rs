@@ -529,6 +529,8 @@ impl Computer {
 
     pub fn reset(&mut self) {
         self.cpu.pc = 0;
+        self.cpu.halted = false;
+        self.cpu.interrupts_enabled = true;
     }
 
     pub fn peek(&self, addr: u16) -> u8 {
