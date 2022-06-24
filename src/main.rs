@@ -101,6 +101,7 @@ struct Pmevm {
     fps: u16,
     computer: Computer,
     keyboard: Keyboard,
+    cycle: Option<u8>,
 }
 
 fn render_box(colors: &Colors, p: Point, rp: &mut RenderPort) {
@@ -137,9 +138,10 @@ fn render_led_line(mut display: u8, colors: &Colors, mut p: Point, rp: &mut Rend
     }
 }
 
-fn render_leds(computer: &Computer, colors: &Colors, mut p: Point, rp: &mut RenderPort) {
+fn render_leds(computer: &Computer, cycle: Option<u8>, colors: &Colors, mut p: Point, rp: &mut RenderPort) {
     for port in 0 .. 3 {
-        render_led_line(computer.peek_port(port), colors, p, rp);
+        let display = if port == 2 { cycle } else { None };
+        render_led_line(display.unwrap_or_else(|| computer.peek_port(port)), colors, p, rp);
         p = p.offset(Vector { x: 0, y: -3 });
     }
 }
@@ -236,7 +238,7 @@ fn render(
     let margin = Thickness::align(Vector { x: 71, y: 14 }, screen_size, HAlign::Center, VAlign::Center);
     let p = margin.shrink_rect(Rect { tl: Point { x: 0, y: 0 }, size: screen_size }).tl;
     render_box(&pmevm.colors, p, rp);
-    render_leds(&pmevm.computer, &pmevm.colors, p.offset(Vector { x: 64, y: 9 }), rp);
+    render_leds(&pmevm.computer, pmevm.cycle, &pmevm.colors, p.offset(Vector { x: 64, y: 9 }), rp);
     render_switch(true, &pmevm.colors, p.offset(Vector { x: 30, y: 4 }), rp);
     render_reset(&pmevm.colors, p.offset(Vector { x: 30, y: 2 }), rp);
     render_m_cycle(&pmevm.colors, p.offset(Vector { x: 30, y: 11 }), rp);
@@ -261,6 +263,7 @@ fn main(_: isize, _: *const *const u8) -> isize {
         keyboard: Keyboard::new(),
         cpu_frequency_100_k_hz: 0,
         fps: 0,
+        cycle: None,
     };
     pmevm.computer.poke_program(MONITOR.0);
     let mut time = MonoTime::get();
