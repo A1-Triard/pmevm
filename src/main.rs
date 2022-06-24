@@ -69,25 +69,30 @@ struct Pmevm {
     keyboard: Keyboard,
 }
 
-fn render_box(p: Point, port: &mut RenderPort) {
+fn render_box(p: Point, rp: &mut RenderPort) {
     let bounds = Rect { tl: p, size: Vector { x: 71, y: 14 } };
     let inner = Thickness::all(1).shrink_rect(bounds);
     for x in Range1d::new(inner.l(), inner.r()) {
-        port.out(Point { x, y: bounds.t() }, Fg::LightGray, Bg::None, "═");
-        port.out(Point { x, y: bounds.b_inner() }, Fg::LightGray, Bg::None, "═");
+        rp.out(Point { x, y: bounds.t() }, Fg::Green, Bg::Black, "═");
+        rp.out(Point { x, y: bounds.b_inner() }, Fg::Green, Bg::Black, "═");
     }
     for y in Range1d::new(inner.t(), inner.b()) {
-        port.out(Point { x: bounds.l(), y }, Fg::LightGray, Bg::None, "║");
-        port.out(Point { x: bounds.r_inner(), y }, Fg::LightGray, Bg::None, "║");
+        rp.out(Point { x: bounds.l(), y }, Fg::Green, Bg::Black, "║");
+        rp.out(Point { x: bounds.r_inner(), y }, Fg::Green, Bg::Black, "║");
     }
-    port.out(bounds.tl, Fg::LightGray, Bg::None, "╔");
-    port.out(bounds.tr_inner(), Fg::LightGray, Bg::None, "╗");
-    port.out(bounds.bl_inner(), Fg::LightGray, Bg::None, "╚");
-    port.out(bounds.br_inner(), Fg::LightGray, Bg::None, "╝");
+    rp.out(bounds.tl, Fg::Green, Bg::Black, "╔");
+    rp.out(bounds.tr_inner(), Fg::Green, Bg::Black, "╗");
+    rp.out(bounds.bl_inner(), Fg::Green, Bg::Black, "╚");
+    rp.out(bounds.br_inner(), Fg::Green, Bg::Black, "╝");
+    for x in Range1d::new(inner.l(), inner.r()) {
+        for y in Range1d::new(inner.t(), inner.b()) {
+            rp.out(Point { x, y }, Fg::Black, Bg::Black, " ");
+        }
+    }
 }
 
 fn render_led(on: bool, p: Point, rp: &mut RenderPort) {
-    rp.out(p, Fg::LightGray, Bg::None, if on { "██" } else { "──" });
+    rp.out(p, Fg::Red, Bg::Black, if on { "██" } else { "──" });
 }
 
 fn render_led_line(mut display: u8, mut p: Point, rp: &mut RenderPort) {
@@ -106,50 +111,49 @@ fn render_leds(computer: &Computer, mut p: Point, rp: &mut RenderPort) {
 }
 
 fn render_switch(on: bool, p: Point, rp: &mut RenderPort) {
-    rp.out(p, Fg::LightGray, Bg::None, "┌─┐");
-    rp.out(p.offset(Vector { x: 0, y: 1 }), Fg::LightGray, Bg::None,
-        if on { "│█│" } else { "│ │" }
-    );
-    rp.out(p.offset(Vector { x: 0, y: 2 }), Fg::LightGray, Bg::None,
-        if on { "│▀│" } else { "│ │" }
-    );
-    rp.out(p.offset(Vector { x: 0, y: 3 }), Fg::LightGray, Bg::None,
-        if on { "│ │" } else { "│▄│" }
-    );
-    rp.out(p.offset(Vector { x: 0, y: 4 }), Fg::LightGray, Bg::None,
-        if on { "│ │" } else { "│█│" }
-    );
-    rp.out(p.offset(Vector { x: 0, y: 5 }), Fg::LightGray, Bg::None, "└─┘");
-    rp.out(p.offset(Vector { x: 4, y: 1 }), Fg::LightGray, Bg::None, "Auto");
-    rp.out(p.offset(Vector { x: 4, y: 4 }), Fg::LightGray, Bg::None, "Step");
+    rp.out(p, Fg::Blue, Bg::Black, "┌─┐");
+    rp.out(p.offset(Vector { x: 0, y: 1 }), Fg::Blue, Bg::Black, "│ │");
+    rp.out(p.offset(Vector { x: 0, y: 2 }), Fg::Blue, Bg::Black, "│ │");
+    rp.out(p.offset(Vector { x: 0, y: 3 }), Fg::Blue, Bg::Black, "│ │");
+    rp.out(p.offset(Vector { x: 0, y: 4 }), Fg::Blue, Bg::Black, "│ │");
+    rp.out(p.offset(Vector { x: 0, y: 5 }), Fg::Blue, Bg::Black, "└─┘");
+    if on {
+        rp.out(p.offset(Vector { x: 1, y: 1 }), Fg::Blue, Bg::Black, "█");
+        rp.out(p.offset(Vector { x: 1, y: 2 }), Fg::Blue, Bg::Black, "▀");
+    } else {
+        rp.out(p.offset(Vector { x: 1, y: 3 }), Fg::Blue, Bg::Black, "▄");
+        rp.out(p.offset(Vector { x: 1, y: 4 }), Fg::Blue, Bg::Black, "█");
+    }
+    rp.out(p.offset(Vector { x: 4, y: 1 }), Fg::LightBlue, Bg::Black, "Auto");
+    rp.out(p.offset(Vector { x: 4, y: 4 }), Fg::LightBlue, Bg::Black, "Step");
 }
 
 fn render_reset(p: Point, rp: &mut RenderPort) {
-    rp.out(p, Fg::Black, Bg::LightGray, "  Reset  ");
+    rp.out(p, Fg::LightMagenta, Bg::Blue, "  Reset  ");
 }
 
 fn render_m_cycle(p: Point, rp: &mut RenderPort) {
-    rp.out(p, Fg::Black, Bg::LightGray, " M.Cycle ");
+    rp.out(p, Fg::LightMagenta, Bg::Blue, " M.Cycle ");
 }
 
 fn render_key(keyboard: &Keyboard, key: MKey, text: &str, p: Point, rp: &mut RenderPort) {
     let pressed = keyboard.get(key);
     rp.out(
         p.offset(Vector { x: 0, y: -1 }),
-        if pressed { Fg::Black } else { Fg::LightGray },
-        Bg::None,
+        if pressed { Fg::Black } else { Fg::Cyan },
+        Bg::Black,
         "▄▄▄▄"
     );
     rp.out(
         p,
-        if pressed { Fg::LightGray } else { Fg::Black },
-        if pressed { Bg::Black } else { Bg::LightGray },
+        if pressed { Fg::Cyan } else { Fg::Black },
+        if pressed { Bg::Black } else { Bg::Cyan },
         text
     );
     rp.out(
         p.offset(Vector { x: 0, y: 1 }),
-        if pressed { Fg::Black } else { Fg::LightGray },
-        Bg::None,
+        if pressed { Fg::Black } else { Fg::Cyan },
+        Bg::Black,
         "▀▀▀▀"
     );
 }
@@ -180,10 +184,10 @@ fn render_cpu_frequency(cpu_frequency_100_k_hz: u16, p: Point, rp: &mut RenderPo
     text[text.len() - 1] = replace(&mut text[text.len() - 2], b'.');
     rp.out(
         p.offset(Vector { x: -(text.len() as u16 as i16), y: 0 }),
-        Fg::LightGray, Bg::None,
+        Fg::LightGray, Bg::Black,
         unsafe { str::from_utf8_unchecked(text) }
     );
-    rp.out(p, Fg::LightGray, Bg::None, " MHz");
+    rp.out(p, Fg::LightGray, Bg::Black, " MHz");
 }
 
 fn render(
@@ -197,12 +201,12 @@ fn render(
     let screen_size = tree.screen_size();
     let margin = Thickness::align(Vector { x: 71, y: 14 }, screen_size, HAlign::Center, VAlign::Center);
     let p = margin.shrink_rect(Rect { tl: Point { x: 0, y: 0 }, size: screen_size }).tl;
+    render_box(p, rp);
     render_leds(&pmevm.computer, p.offset(Vector { x: 64, y: 9 }), rp);
     render_switch(true, p.offset(Vector { x: 30, y: 4 }), rp);
     render_reset(p.offset(Vector { x: 30, y: 2 }), rp);
     render_m_cycle(p.offset(Vector { x: 30, y: 11 }), rp);
     render_keys(&pmevm.keyboard, p.offset(Vector { x: 3, y: 2 }), rp);
-    render_box(p, rp);
     if !pmevm.computer.is_cpu_halted() {
         render_cpu_frequency(pmevm.cpu_frequency_100_k_hz, p.offset(Vector { x: 62, y: 11 }), rp);
     }
