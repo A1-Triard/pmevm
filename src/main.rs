@@ -340,7 +340,7 @@ fn main(_: isize, _: *const *const u8) -> isize {
         ticks_balance += ticks_balance_delta;
         while ticks_balance > 0 {
             pmevm.keyboard.step(&mut pmevm.computer);
-            if let Some(cpu_ticks) = pmevm.computer.step() {
+            if let Some(cpu_ticks) = pmevm.computer.step_ticks() {
                 ticks_balance -= i32::from(cpu_ticks);
             } else {
                 ticks_balance = 0;

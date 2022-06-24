@@ -1,3 +1,4 @@
+use arrayvec::ArrayVec;
 use core::mem::{replace, swap};
 use educe::Educe;
 use enumn::N;
@@ -566,29 +567,65 @@ impl Computer {
         let h = self.mem.get(self.cpu.pc.wrapping_add(2));
         ((h as u16) << 8) | (l as u16)
     }
+
+    pub fn step_cycles(&mut self) -> MachineCycles {
+        let mut cycles = MachineCycles::new();
+        if self.cpu.halted {
+            cycles.push(0b10001010);
+            return cycles;
+        }
+        let op: Op = self.mem.get(self.cpu.pc).into();
+        cycles.push(op.into());
+        op.execute(self, Some(&mut cycles));
+        cycles
+    }
+
+    pub fn step_ticks(&mut self) -> Option<u8> {
+        if self.cpu.halted { return None; }
+        let op: Op = self.mem.get(self.cpu.pc).into();
+        let ticks = op.ticks(self.cpu.psw);
+        op.execute(self, None);
+        Some(ticks)
+    }
 }
 
+pub type MachineCycles = ArrayVec<u8, 5>;
+
 impl Op {
-    fn execute(self, computer: &mut Computer) {
-        fn execute_ret(computer: &mut Computer) {
+    fn execute(self, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+        fn execute_ret(computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
             let l = computer.mem.get(computer.cpu.sp);
             let h = computer.mem.get(computer.cpu.sp.wrapping_add(1));
             computer.cpu.pc = ((h as u16) << 8) | (l as u16);
             computer.cpu.sp = computer.cpu.sp.wrapping_add(2);
+            if let Some(cycles) = cycles {
+                cycles.push(l);
+                cycles.push(h);
+            }
         }
 
-        fn execute_jmp(computer: &mut Computer) {
+        fn execute_jmp(computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
             let addr = computer.load_word();
             computer.cpu.pc = addr;
+            if let Some(cycles) = cycles {
+                cycles.push(addr as u8);
+                cycles.push((addr >> 8) as u8);
+            }
         }
 
-        fn execute_call(computer: &mut Computer) {
+        fn execute_call(computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
             let addr = computer.load_word();
             let ret = computer.cpu.pc.wrapping_add(3);
             computer.mem.set(computer.cpu.sp.wrapping_sub(2), ret as u8);
             computer.mem.set(computer.cpu.sp.wrapping_sub(1), (ret >> 8) as u8);
             computer.cpu.sp = computer.cpu.sp.wrapping_sub(2);
             computer.cpu.pc = addr;
+            if let Some(cycles) = cycles {
+                cycles.push(addr as u8);
+                cycles.push((addr >> 8) as u8);
+                cycles.push(ret as u8);
+                cycles.push((ret >> 8) as u8);
+            }
         }
 
         fn execute_add(computer: &mut Computer, a: u8, d: u8, c: bool) -> u8 {
@@ -617,22 +654,44 @@ impl Op {
                 computer.mem.set(addr, computer.cpu.l);
                 computer.mem.set(addr.wrapping_add(1), computer.cpu.h);
                 computer.cpu.pc = computer.cpu.pc.wrapping_add(3);
+                if let Some(cycles) = cycles {
+                    cycles.push(addr as u8);
+                    cycles.push((addr >> 8) as u8);
+                    cycles.push(computer.cpu.l);
+                    cycles.push(computer.cpu.h);
+                }
             },
             Op::Lhld => {
                 let addr = computer.load_word();
                 computer.cpu.l = computer.mem.get(addr);
                 computer.cpu.h = computer.mem.get(addr.wrapping_add(1));
                 computer.cpu.pc = computer.cpu.pc.wrapping_add(3);
+                if let Some(cycles) = cycles {
+                    cycles.push(addr as u8);
+                    cycles.push((addr >> 8) as u8);
+                    cycles.push(computer.cpu.l);
+                    cycles.push(computer.cpu.h);
+                }
             },
             Op::Sta => {
                 let addr = computer.load_word();
                 computer.mem.set(addr, computer.cpu.a);
                 computer.cpu.pc = computer.cpu.pc.wrapping_add(3);
+                if let Some(cycles) = cycles {
+                    cycles.push(addr as u8);
+                    cycles.push((addr >> 8) as u8);
+                    cycles.push(computer.cpu.a);
+                }
             },
             Op::Lda => {
                 let addr = computer.load_word();
                 computer.cpu.a = computer.mem.get(addr);
                 computer.cpu.pc = computer.cpu.pc.wrapping_add(3);
+                if let Some(cycles) = cycles {
+                    cycles.push(addr as u8);
+                    cycles.push((addr >> 8) as u8);
+                    cycles.push(computer.cpu.a);
+                }
             },
             Op::Rlc => {
                 let carry = computer.cpu.a >> 7;
@@ -686,7 +745,7 @@ impl Op {
                 computer.cpu.psw.set_carry(!computer.cpu.psw.carry());
                 computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
             },
-            Op::Ret | Op::Ret_ => execute_ret(computer),
+            Op::Ret | Op::Ret_ => execute_ret(computer, cycles),
             Op::Pchl => {
                 computer.cpu.pc = ((computer.cpu.h as u16) << 8) | (computer.cpu.l as u16);
             },
@@ -694,23 +753,39 @@ impl Op {
                 computer.cpu.sp = ((computer.cpu.h as u16) << 8) | (computer.cpu.l as u16);
                 computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
             },
-            Op::Jmp | Op::Jmp_ => execute_jmp(computer),
+            Op::Jmp | Op::Jmp_ => execute_jmp(computer, cycles),
             Op::Out => {
                 let port = computer.load_byte();
                 computer.cpu.pc = computer.cpu.pc.wrapping_add(2);
                 computer.ports[port as usize].out = computer.cpu.a;
+                if let Some(cycles) = cycles {
+                    cycles.push(port);
+                    cycles.push(computer.cpu.a);
+                }
             },
             Op::In => {
                 let port = computer.load_byte();
                 computer.cpu.a = computer.ports[port as usize].in_;
                 computer.cpu.pc = computer.cpu.pc.wrapping_add(2);
+                if let Some(cycles) = cycles {
+                    cycles.push(port);
+                    cycles.push(computer.cpu.a);
+                }
             },
             Op::Xthl => {
                 let l = computer.mem.get(computer.cpu.sp);
                 let h = computer.mem.get(computer.cpu.sp.wrapping_add(1));
-                computer.mem.set(computer.cpu.sp, replace(&mut computer.cpu.l, l));
-                computer.mem.set(computer.cpu.sp.wrapping_add(1), replace(&mut computer.cpu.h, h));
+                let l = replace(&mut computer.cpu.l, l);
+                let h = replace(&mut computer.cpu.h, h);
+                computer.mem.set(computer.cpu.sp, l);
+                computer.mem.set(computer.cpu.sp.wrapping_add(1), h);
                 computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+                if let Some(cycles) = cycles {
+                    cycles.push(computer.cpu.l);
+                    cycles.push(computer.cpu.h);
+                    cycles.push(l);
+                    cycles.push(h);
+                }
             },
             Op::Xchg => {
                 swap(&mut computer.cpu.h, &mut computer.cpu.d);
@@ -730,6 +805,9 @@ impl Op {
                 let a = computer.cpu.a;
                 computer.cpu.a = execute_add(computer, a, d, false);
                 computer.cpu.pc = computer.cpu.pc.wrapping_add(2);
+                if let Some(cycles) = cycles {
+                    cycles.push(d);
+                }
             },
             Op::Aci => {
                 let d = computer.load_byte();
@@ -737,6 +815,9 @@ impl Op {
                 let c = computer.cpu.psw.carry();
                 computer.cpu.a = execute_add(computer, a, d, c);
                 computer.cpu.pc = computer.cpu.pc.wrapping_add(2);
+                if let Some(cycles) = cycles {
+                    cycles.push(d);
+                }
             },
             Op::Sui => {
                 let d = computer.load_byte();
@@ -744,6 +825,9 @@ impl Op {
                 let a = execute_sub(computer, a, d, false);
                 computer.cpu.a = a;
                 computer.cpu.pc = computer.cpu.pc.wrapping_add(2);
+                if let Some(cycles) = cycles {
+                    cycles.push(d);
+                }
             },
             Op::Sbi => {
                 let d = computer.load_byte();
@@ -752,6 +836,9 @@ impl Op {
                 let a = execute_sub(computer, a, d, c);
                 computer.cpu.a = a;
                 computer.cpu.pc = computer.cpu.pc.wrapping_add(2);
+                if let Some(cycles) = cycles {
+                    cycles.push(d);
+                }
             },
             Op::Ani => {
                 let d = computer.load_byte();
@@ -760,6 +847,9 @@ impl Op {
                 computer.cpu.a &= d;
                 computer.cpu.psw.check(computer.cpu.a);
                 computer.cpu.pc = computer.cpu.pc.wrapping_add(2);
+                if let Some(cycles) = cycles {
+                    cycles.push(d);
+                }
             },
             Op::Xri => {
                 let d = computer.load_byte();
@@ -768,6 +858,9 @@ impl Op {
                 computer.cpu.a ^= d;
                 computer.cpu.psw.check(computer.cpu.a);
                 computer.cpu.pc = computer.cpu.pc.wrapping_add(2);
+                if let Some(cycles) = cycles {
+                    cycles.push(d);
+                }
             },
             Op::Ori => {
                 let d = computer.load_byte();
@@ -776,12 +869,18 @@ impl Op {
                 computer.cpu.a |= d;
                 computer.cpu.psw.check(computer.cpu.a);
                 computer.cpu.pc = computer.cpu.pc.wrapping_add(2);
+                if let Some(cycles) = cycles {
+                    cycles.push(d);
+                }
             },
             Op::Cpi => {
                 let d = computer.load_byte();
                 let a = computer.cpu.a;
                 execute_sub(computer, a, d, false);
                 computer.cpu.pc = computer.cpu.pc.wrapping_add(2);
+                if let Some(cycles) = cycles {
+                    cycles.push(d);
+                }
             },
             Op::Mov(OpReg::M, OpReg::M) => {
                 computer.cpu.halted = true;
@@ -790,12 +889,22 @@ impl Op {
                 let d = computer.reg(rs);
                 computer.set_reg(rd, d);
                 computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+                if let Some(cycles) = cycles {
+                    if rs == OpReg::M || rd == OpReg::M {
+                        cycles.push(d);
+                    }
+                }
             },
             Op::Add(r) => {
                 let d = computer.reg(r);
                 let a = computer.cpu.a;
                 computer.cpu.a = execute_add(computer, a, d, false);
                 computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+                if let Some(cycles) = cycles {
+                    if r == OpReg::M {
+                        cycles.push(d);
+                    }
+                }
             },
             Op::Adc(r) => {
                 let d = computer.reg(r);
@@ -803,6 +912,11 @@ impl Op {
                 let c = computer.cpu.psw.carry();
                 computer.cpu.a = execute_add(computer, a, d, c);
                 computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+                if let Some(cycles) = cycles {
+                    if r == OpReg::M {
+                        cycles.push(d);
+                    }
+                }
             },
             Op::Sub(r) => {
                 let d = computer.reg(r);
@@ -810,6 +924,11 @@ impl Op {
                 let a = execute_sub(computer, a, d, false);
                 computer.cpu.a = a;
                 computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+                if let Some(cycles) = cycles {
+                    if r == OpReg::M {
+                        cycles.push(d);
+                    }
+                }
             },
             Op::Sbb(r) => {
                 let d = computer.reg(r);
@@ -818,6 +937,11 @@ impl Op {
                 let a = execute_sub(computer, a, d, c);
                 computer.cpu.a = a;
                 computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+                if let Some(cycles) = cycles {
+                    if r == OpReg::M {
+                        cycles.push(d);
+                    }
+                }
             },
             Op::Ana(r) => {
                 let d = computer.reg(r);
@@ -826,6 +950,11 @@ impl Op {
                 computer.cpu.a &= d;
                 computer.cpu.psw.check(computer.cpu.a);
                 computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+                if let Some(cycles) = cycles {
+                    if r == OpReg::M {
+                        cycles.push(d);
+                    }
+                }
             },
             Op::Xra(r) => {
                 let d = computer.reg(r);
@@ -834,6 +963,11 @@ impl Op {
                 computer.cpu.a ^= d;
                 computer.cpu.psw.check(computer.cpu.a);
                 computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+                if let Some(cycles) = cycles {
+                    if r == OpReg::M {
+                        cycles.push(d);
+                    }
+                }
             },
             Op::Ora(r) => {
                 let d = computer.reg(r);
@@ -842,12 +976,22 @@ impl Op {
                 computer.cpu.a |= d;
                 computer.cpu.psw.check(computer.cpu.a);
                 computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+                if let Some(cycles) = cycles {
+                    if r == OpReg::M {
+                        cycles.push(d);
+                    }
+                }
             },
             Op::Cmp(r) => {
                 let d = computer.reg(r);
                 let a = computer.cpu.a;
                 execute_sub(computer, a, d, false);
                 computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+                if let Some(cycles) = cycles {
+                    if r == OpReg::M {
+                        cycles.push(d);
+                    }
+                }
             },
             Op::Nop(_) => {
                 computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
@@ -856,6 +1000,10 @@ impl Op {
                 let d = computer.load_word();
                 computer.set_reg_pair(rp, d);
                 computer.cpu.pc = computer.cpu.pc.wrapping_add(3);
+                if let Some(cycles) = cycles {
+                    cycles.push(d as u8);
+                    cycles.push((d >> 8) as u8);
+                }
             },
             Op::Dad(rp) => {
                 let d = computer.reg_pair(rp);
@@ -870,11 +1018,17 @@ impl Op {
                 let addr = computer.ext_reg(rp);
                 computer.mem.set(addr, computer.cpu.a);
                 computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+                if let Some(cycles) = cycles {
+                    cycles.push(computer.cpu.a);
+                }
             },
             Op::Ldax(rp) => {
                 let addr = computer.ext_reg(rp);
                 computer.cpu.a = computer.mem.get(addr);
                 computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+                if let Some(cycles) = cycles {
+                    cycles.push(computer.cpu.a);
+                }
             },
             Op::Inx(rp) => {
                 let d = computer.reg_pair(rp);
@@ -891,20 +1045,36 @@ impl Op {
                 let a = execute_add(computer, d, 1, false);
                 computer.set_reg(r, a);
                 computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+                if let Some(cycles) = cycles {
+                    if r == OpReg::M {
+                        cycles.push(d);
+                    }
+                }
             },
             Op::Dcr(r) => {
                 let d = computer.reg(r);
                 let a = execute_sub(computer, d, 1, false);
                 computer.set_reg(r, a);
                 computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+                if let Some(cycles) = cycles {
+                    if r == OpReg::M {
+                        cycles.push(d);
+                    }
+                }
             },
             Op::Mvi(r) => {
                 let d = computer.load_byte();
                 computer.set_reg(r, d);
                 computer.cpu.pc = computer.cpu.pc.wrapping_add(2);
+                if let Some(cycles) = cycles {
+                    cycles.push(d);
+                    if r == OpReg::M {
+                        cycles.push(d);
+                    }
+                }
             },
             Op::Rcc(cond) => if cond.test(computer.cpu.psw) {
-                execute_ret(computer);
+                execute_ret(computer, cycles);
             } else {
                 computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
             },
@@ -914,14 +1084,18 @@ impl Op {
                 computer.set_reg_word(rp, ((h as u16) << 8) | (l as u16));
                 computer.cpu.sp = computer.cpu.sp.wrapping_add(2);
                 computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+                if let Some(cycles) = cycles {
+                    cycles.push(l);
+                    cycles.push(h);
+                }
             },
             Op::Jcc(cond) => if cond.test(computer.cpu.psw) {
-                execute_jmp(computer);
+                execute_jmp(computer, cycles);
             } else {
                 computer.cpu.pc = computer.cpu.pc.wrapping_add(3);
             },
             Op::Ccc(cond) => if cond.test(computer.cpu.psw) {
-                execute_call(computer);
+                execute_call(computer, cycles);
             } else {
                 computer.cpu.pc = computer.cpu.pc.wrapping_add(3);
             },
@@ -931,21 +1105,15 @@ impl Op {
                 computer.mem.set(computer.cpu.sp.wrapping_sub(2), w as u8);
                 computer.cpu.sp = computer.cpu.sp.wrapping_sub(2);
                 computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+                if let Some(cycles) = cycles {
+                    cycles.push(w as u8);
+                    cycles.push((w >> 8) as u8);
+                }
             },
-            Op::Call(_) => execute_call(computer),
+            Op::Call(_) => execute_call(computer, cycles),
             Op::Rst(a) => {
                 computer.cpu.pc = ((a as u8) << 3) as u16;
             },
         }
-    }
-}
-
-impl Computer {
-    pub fn step(&mut self) -> Option<u8> {
-        if self.cpu.halted { return None; }
-        let op: Op = self.mem.get(self.cpu.pc).into();
-        let ticks = op.ticks(self.cpu.psw);
-        op.execute(self);
-        Some(ticks)
     }
 }
