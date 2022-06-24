@@ -73,7 +73,6 @@ struct Colors {
     switch_text: Fg,
 }
 
-/*
 const COLOR: Colors = Colors {
     bg: Bg::Black,
     box_: Fg::Green,
@@ -84,7 +83,6 @@ const COLOR: Colors = Colors {
     switch: Fg::Blue,
     switch_text: Fg::LightBlue,
 };
-*/
 
 const GRAY: Colors = Colors {
     bg: Bg::None,
@@ -258,7 +256,7 @@ fn main(_: isize, _: *const *const u8) -> isize {
     let screen = unsafe { tuifw_screen::init() }.unwrap();
     let mut windows = WindowTree::new(screen, render);
     let mut pmevm = Pmevm {
-        colors: &GRAY,
+        colors: &COLOR,
         computer: Computer::new(),
         keyboard: Keyboard::new(),
         cpu_frequency_100_k_hz: 0,
@@ -279,9 +277,12 @@ fn main(_: isize, _: *const *const u8) -> isize {
             }
         }
         if let Some(event) = WindowTree::update(&mut windows, false, &mut pmevm).unwrap() {
-            if matches!(event, Event::Key(_, Key::Escape)) { break; }
-            if matches!(event, Event::Key(_, Key::Backspace)) {
-                pmevm.computer.reset();
+            match event {
+                Event::Key(_, Key::Escape) => break,
+                Event::Key(_, Key::Backspace) => pmevm.computer.reset(),
+                Event::Key(_, Key::Char('g')) => pmevm.colors = &GRAY,
+                Event::Key(_, Key::Char('c')) => pmevm.colors = &COLOR,
+                _ => { },
             }
             let m_key = match event {
                 Event::Key(_, Key::Char('0')) => Some(MKey::K0),
