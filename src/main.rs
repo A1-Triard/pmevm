@@ -43,7 +43,7 @@ use core::str::{self};
 use pmevm_backend::{MONITOR, Computer, ComputerProgramExt, Keyboard};
 use pmevm_backend::Key as MKey;
 use timer_no_std::{MonoTime, sleep_ms_u16};
-use tuifw_screen::{Attr, Color, Event, HAlign, Key, Point};
+use tuifw_screen::{Bg, Event, Fg, HAlign, Key, Point};
 use tuifw_screen::{Range1d, Rect, Thickness, VAlign, Vector};
 use tuifw_window::{RenderPort, Window, WindowTree};
 
@@ -73,21 +73,21 @@ fn render_box(p: Point, port: &mut RenderPort) {
     let bounds = Rect { tl: p, size: Vector { x: 71, y: 14 } };
     let inner = Thickness::all(1).shrink_rect(bounds);
     for x in Range1d::new(inner.l(), inner.r()) {
-        port.out(Point { x, y: bounds.t() }, Color::White, None, Attr::empty(), "═");
-        port.out(Point { x, y: bounds.b_inner() }, Color::White, None, Attr::empty(), "═");
+        port.out(Point { x, y: bounds.t() }, Fg::LightGray, Bg::None, "═");
+        port.out(Point { x, y: bounds.b_inner() }, Fg::LightGray, Bg::None, "═");
     }
     for y in Range1d::new(inner.t(), inner.b()) {
-        port.out(Point { x: bounds.l(), y }, Color::White, None, Attr::empty(), "║");
-        port.out(Point { x: bounds.r_inner(), y }, Color::White, None, Attr::empty(), "║");
+        port.out(Point { x: bounds.l(), y }, Fg::LightGray, Bg::None, "║");
+        port.out(Point { x: bounds.r_inner(), y }, Fg::LightGray, Bg::None, "║");
     }
-    port.out(bounds.tl, Color::White, None, Attr::empty(), "╔");
-    port.out(bounds.tr_inner(), Color::White, None, Attr::empty(), "╗");
-    port.out(bounds.bl_inner(), Color::White, None, Attr::empty(), "╚");
-    port.out(bounds.br_inner(), Color::White, None, Attr::empty(), "╝");
+    port.out(bounds.tl, Fg::LightGray, Bg::None, "╔");
+    port.out(bounds.tr_inner(), Fg::LightGray, Bg::None, "╗");
+    port.out(bounds.bl_inner(), Fg::LightGray, Bg::None, "╚");
+    port.out(bounds.br_inner(), Fg::LightGray, Bg::None, "╝");
 }
 
 fn render_led(on: bool, p: Point, rp: &mut RenderPort) {
-    rp.out(p, Color::White, None, Attr::empty(), if on { "██" } else { "──" });
+    rp.out(p, Fg::LightGray, Bg::None, if on { "██" } else { "──" });
 }
 
 fn render_led_line(mut display: u8, mut p: Point, rp: &mut RenderPort) {
@@ -106,63 +106,71 @@ fn render_leds(computer: &Computer, mut p: Point, rp: &mut RenderPort) {
 }
 
 fn render_switch(on: bool, p: Point, rp: &mut RenderPort) {
-    rp.out(p, Color::White, None, Attr::empty(), "┌─┐");
-    rp.out(p.offset(Vector { x: 0, y: 1 }), Color::White, None, Attr::empty(),
+    rp.out(p, Fg::LightGray, Bg::None, "┌─┐");
+    rp.out(p.offset(Vector { x: 0, y: 1 }), Fg::LightGray, Bg::None,
         if on { "│█│" } else { "│ │" }
     );
-    rp.out(p.offset(Vector { x: 0, y: 2 }), Color::White, None, Attr::empty(),
+    rp.out(p.offset(Vector { x: 0, y: 2 }), Fg::LightGray, Bg::None,
         if on { "│▀│" } else { "│ │" }
     );
-    rp.out(p.offset(Vector { x: 0, y: 3 }), Color::White, None, Attr::empty(),
+    rp.out(p.offset(Vector { x: 0, y: 3 }), Fg::LightGray, Bg::None,
         if on { "│ │" } else { "│▄│" }
     );
-    rp.out(p.offset(Vector { x: 0, y: 4 }), Color::White, None, Attr::empty(),
+    rp.out(p.offset(Vector { x: 0, y: 4 }), Fg::LightGray, Bg::None,
         if on { "│ │" } else { "│█│" }
     );
-    rp.out(p.offset(Vector { x: 0, y: 5 }), Color::White, None, Attr::empty(), "└─┘");
-    rp.out(p.offset(Vector { x: 4, y: 1 }), Color::White, None, Attr::empty(), "Auto");
-    rp.out(p.offset(Vector { x: 4, y: 4 }), Color::White, None, Attr::empty(), "Step");
+    rp.out(p.offset(Vector { x: 0, y: 5 }), Fg::LightGray, Bg::None, "└─┘");
+    rp.out(p.offset(Vector { x: 4, y: 1 }), Fg::LightGray, Bg::None, "Auto");
+    rp.out(p.offset(Vector { x: 4, y: 4 }), Fg::LightGray, Bg::None, "Step");
 }
 
 fn render_reset(p: Point, rp: &mut RenderPort) {
-    rp.out(p, Color::Black, Some(Color::White), Attr::empty(), "  Reset  ");
+    rp.out(p, Fg::Black, Bg::LightGray, "  Reset  ");
 }
 
 fn render_m_cycle(p: Point, rp: &mut RenderPort) {
-    rp.out(p, Color::Black, Some(Color::White), Attr::empty(), " M.Cycle ");
+    rp.out(p, Fg::Black, Bg::LightGray, " M.Cycle ");
 }
 
-fn render_key(text: &str, p: Point, rp: &mut RenderPort) {
+fn render_key(keyboard: &Keyboard, key: MKey, text: &str, p: Point, rp: &mut RenderPort) {
+    let pressed = keyboard.get(key);
     rp.out(
         p.offset(Vector { x: 0, y: -1 }),
-        Color::White, None, Attr::empty(),
+        if pressed { Fg::Black } else { Fg::LightGray },
+        Bg::None,
         "▄▄▄▄"
     );
-    rp.out(p, Color::Black, Some(Color::White), Attr::empty(), text);
+    rp.out(
+        p,
+        if pressed { Fg::LightGray } else { Fg::Black },
+        if pressed { Bg::Black } else { Bg::LightGray },
+        text
+    );
     rp.out(
         p.offset(Vector { x: 0, y: 1 }),
-        Color::White, None, Attr::empty(),
+        if pressed { Fg::Black } else { Fg::LightGray },
+        Bg::None,
         "▀▀▀▀"
     );
 }
 
-fn render_keys(p: Point, rp: &mut RenderPort) {
-    render_key("    ", p, rp);
-    render_key(" HB ", p.offset(Vector { x: 0, y: 3 }), rp);
-    render_key("  4 ", p.offset(Vector { x: 0, y: 6 }), rp);
-    render_key("  0 ", p.offset(Vector { x: 0, y: 9 }), rp);
-    render_key("    ", p.offset(Vector { x: 6, y: 0 }), rp);
-    render_key(" LB ", p.offset(Vector { x: 6, y: 3 }), rp);
-    render_key("  5 ", p.offset(Vector { x: 6, y: 6 }), rp);
-    render_key("  1 ", p.offset(Vector { x: 6, y: 9 }), rp);
-    render_key("    ", p.offset(Vector { x: 12, y: 0 }), rp);
-    render_key("  E ", p.offset(Vector { x: 12, y: 3 }), rp);
-    render_key("  6 ", p.offset(Vector { x: 12, y: 6 }), rp);
-    render_key("  2 ", p.offset(Vector { x: 12, y: 9 }), rp);
-    render_key("    ", p.offset(Vector { x: 18, y: 0 }), rp);
-    render_key("  R ", p.offset(Vector { x: 18, y: 3 }), rp);
-    render_key("  7 ", p.offset(Vector { x: 18, y: 6 }), rp);
-    render_key("  3 ", p.offset(Vector { x: 18, y: 9 }), rp);
+fn render_keys(keyboard: &Keyboard, p: Point, rp: &mut RenderPort) {
+    render_key(keyboard, MKey::KC, "    ", p, rp);
+    render_key(keyboard, MKey::K8, " HB ", p.offset(Vector { x: 0, y: 3 }), rp);
+    render_key(keyboard, MKey::K4, "  4 ", p.offset(Vector { x: 0, y: 6 }), rp);
+    render_key(keyboard, MKey::K0, "  0 ", p.offset(Vector { x: 0, y: 9 }), rp);
+    render_key(keyboard, MKey::KD, "    ", p.offset(Vector { x: 6, y: 0 }), rp);
+    render_key(keyboard, MKey::K9, " LB ", p.offset(Vector { x: 6, y: 3 }), rp);
+    render_key(keyboard, MKey::K5, "  5 ", p.offset(Vector { x: 6, y: 6 }), rp);
+    render_key(keyboard, MKey::K1, "  1 ", p.offset(Vector { x: 6, y: 9 }), rp);
+    render_key(keyboard, MKey::KE, "    ", p.offset(Vector { x: 12, y: 0 }), rp);
+    render_key(keyboard, MKey::KA, "  E ", p.offset(Vector { x: 12, y: 3 }), rp);
+    render_key(keyboard, MKey::K6, "  6 ", p.offset(Vector { x: 12, y: 6 }), rp);
+    render_key(keyboard, MKey::K2, "  2 ", p.offset(Vector { x: 12, y: 9 }), rp);
+    render_key(keyboard, MKey::KF, "    ", p.offset(Vector { x: 18, y: 0 }), rp);
+    render_key(keyboard, MKey::KB, "  R ", p.offset(Vector { x: 18, y: 3 }), rp);
+    render_key(keyboard, MKey::K7, "  7 ", p.offset(Vector { x: 18, y: 6 }), rp);
+    render_key(keyboard, MKey::K3, "  3 ", p.offset(Vector { x: 18, y: 9 }), rp);
 }
 
 fn render_cpu_frequency(cpu_frequency_100_k_hz: u16, p: Point, rp: &mut RenderPort) {
@@ -172,10 +180,10 @@ fn render_cpu_frequency(cpu_frequency_100_k_hz: u16, p: Point, rp: &mut RenderPo
     text[text.len() - 1] = replace(&mut text[text.len() - 2], b'.');
     rp.out(
         p.offset(Vector { x: -(text.len() as u16 as i16), y: 0 }),
-        Color::White, None, Attr::empty(),
+        Fg::LightGray, Bg::None,
         unsafe { str::from_utf8_unchecked(text) }
     );
-    rp.out(p, Color::White, None, Attr::empty(), " MHz");
+    rp.out(p, Fg::LightGray, Bg::None, " MHz");
 }
 
 fn render(
@@ -185,7 +193,7 @@ fn render(
     pmevm: &mut Pmevm,
 ) {
     debug_assert!(window.is_none());
-    rp.fill(|rp, p| rp.out(p, Color::White, None, Attr::empty(), " "));
+    rp.fill(|rp, p| rp.out(p, Fg::LightGray, Bg::None, " "));
     let screen_size = tree.screen_size();
     let margin = Thickness::align(Vector { x: 71, y: 14 }, screen_size, HAlign::Center, VAlign::Center);
     let p = margin.shrink_rect(Rect { tl: Point { x: 0, y: 0 }, size: screen_size }).tl;
@@ -193,7 +201,7 @@ fn render(
     render_switch(true, p.offset(Vector { x: 30, y: 4 }), rp);
     render_reset(p.offset(Vector { x: 30, y: 2 }), rp);
     render_m_cycle(p.offset(Vector { x: 30, y: 11 }), rp);
-    render_keys(p.offset(Vector { x: 3, y: 2 }), rp);
+    render_keys(&pmevm.keyboard, p.offset(Vector { x: 3, y: 2 }), rp);
     render_box(p, rp);
     if !pmevm.computer.is_cpu_halted() {
         render_cpu_frequency(pmevm.cpu_frequency_100_k_hz, p.offset(Vector { x: 62, y: 11 }), rp);
@@ -203,6 +211,7 @@ fn render(
 const FPS: u16 = 40;
 const MAX_CPU_FREQUENCY_100_K_HZ: u16 = 10;
 const MAX_TICKS_BALANCE: i32 = 5000 * MAX_CPU_FREQUENCY_100_K_HZ as u32 as i32;
+const KEY_PRESS_MS: u8 = 100;
 
 #[start]
 fn main(_: isize, _: *const *const u8) -> isize {
@@ -222,7 +231,7 @@ fn main(_: isize, _: *const *const u8) -> isize {
     loop {
         for (key, key_time) in keyboard_time.iter_mut().enumerate() {
             let release = key_time
-                .map_or(false, |x| MonoTime::get().delta_ms_u8(x).map_or(true, |x| x >= 40));
+                .map_or(false, |x| MonoTime::get().delta_ms_u8(x).map_or(true, |x| x >= KEY_PRESS_MS));
             if release {
                 *key_time = None;
                 pmevm.keyboard.set(MKey::n(key as u8).unwrap(), false);
@@ -230,11 +239,10 @@ fn main(_: isize, _: *const *const u8) -> isize {
         }
         if let Some(event) = WindowTree::update(&mut windows, false, &mut pmevm).unwrap() {
             if matches!(event, Event::Key(_, Key::Escape)) { break; }
+            if matches!(event, Event::Key(_, Key::Backspace)) {
+                pmevm.computer.reset();
+            }
             let m_key = match event {
-                Event::Key(_, Key::Backspace) => {
-                    pmevm.computer.reset();
-                    None
-                },
                 Event::Key(_, Key::Char('0')) => Some(MKey::K0),
                 Event::Key(_, Key::Char('1')) => Some(MKey::K1),
                 Event::Key(_, Key::Char('2')) => Some(MKey::K2),
@@ -252,6 +260,24 @@ fn main(_: isize, _: *const *const u8) -> isize {
             if let Some(m_key) = m_key {
                 pmevm.keyboard.set(m_key, true);
                 keyboard_time[m_key as u8 as usize] = Some(MonoTime::get());
+            }
+            let m_key = match event {
+                Event::Key(_, Key::Char(')')) => Some(MKey::K0),
+                Event::Key(_, Key::Char('!')) => Some(MKey::K1),
+                Event::Key(_, Key::Char('@')) => Some(MKey::K2),
+                Event::Key(_, Key::Char('#')) => Some(MKey::K3),
+                Event::Key(_, Key::Char('$')) => Some(MKey::K4),
+                Event::Key(_, Key::Char('%')) => Some(MKey::K5),
+                Event::Key(_, Key::Char('^')) => Some(MKey::K6),
+                Event::Key(_, Key::Char('&')) => Some(MKey::K7),
+                Event::Key(_, Key::Char('H')) => Some(MKey::K8),
+                Event::Key(_, Key::Char('L')) => Some(MKey::K9),
+                Event::Key(_, Key::Char('E')) => Some(MKey::KA),
+                Event::Key(_, Key::Char('R')) => Some(MKey::KB),
+                _ => None,
+            };
+            if let Some(m_key) = m_key {
+                pmevm.keyboard.set(m_key, !pmevm.keyboard.get(m_key));
             }
         }
         windows.invalidate_screen();
