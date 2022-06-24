@@ -62,132 +62,168 @@ impl<const LEN: usize> Write for Buf<LEN> {
     }
 }
 
+struct Colors {
+    bg: Bg,
+    box_: Fg,
+    led: Fg,
+    key: Bg,
+    button: Bg,
+    button_text: Fg,
+    switch: Fg,
+    switch_text: Fg,
+}
+
+/*
+const COLOR: Colors = Colors {
+    bg: Bg::Black,
+    box_: Fg::Green,
+    led: Fg::Red,
+    key: Bg::Cyan,
+    button: Bg::Blue,
+    button_text: Fg::LightMagenta,
+    switch: Fg::Blue,
+    switch_text: Fg::LightBlue,
+};
+*/
+
+const GRAY: Colors = Colors {
+    bg: Bg::None,
+    box_: Fg::LightGray,
+    led: Fg::LightGray,
+    key: Bg::LightGray,
+    button: Bg::LightGray,
+    button_text: Fg::Black,
+    switch: Fg::LightGray,
+    switch_text: Fg::LightGray,
+};
+
 struct Pmevm {
+    colors: &'static Colors,
     cpu_frequency_100_k_hz: u16,
     fps: u16,
     computer: Computer,
     keyboard: Keyboard,
 }
 
-fn render_box(p: Point, rp: &mut RenderPort) {
+fn render_box(colors: &Colors, p: Point, rp: &mut RenderPort) {
     let bounds = Rect { tl: p, size: Vector { x: 71, y: 14 } };
     let inner = Thickness::all(1).shrink_rect(bounds);
     for x in Range1d::new(inner.l(), inner.r()) {
-        rp.out(Point { x, y: bounds.t() }, Fg::Green, Bg::Black, "═");
-        rp.out(Point { x, y: bounds.b_inner() }, Fg::Green, Bg::Black, "═");
+        rp.out(Point { x, y: bounds.t() }, colors.box_, colors.bg, "═");
+        rp.out(Point { x, y: bounds.b_inner() }, colors.box_, colors.bg, "═");
     }
     for y in Range1d::new(inner.t(), inner.b()) {
-        rp.out(Point { x: bounds.l(), y }, Fg::Green, Bg::Black, "║");
-        rp.out(Point { x: bounds.r_inner(), y }, Fg::Green, Bg::Black, "║");
+        rp.out(Point { x: bounds.l(), y }, colors.box_, colors.bg, "║");
+        rp.out(Point { x: bounds.r_inner(), y }, colors.box_, colors.bg, "║");
     }
-    rp.out(bounds.tl, Fg::Green, Bg::Black, "╔");
-    rp.out(bounds.tr_inner(), Fg::Green, Bg::Black, "╗");
-    rp.out(bounds.bl_inner(), Fg::Green, Bg::Black, "╚");
-    rp.out(bounds.br_inner(), Fg::Green, Bg::Black, "╝");
+    rp.out(bounds.tl, colors.box_, colors.bg, "╔");
+    rp.out(bounds.tr_inner(), colors.box_, colors.bg, "╗");
+    rp.out(bounds.bl_inner(), colors.box_, colors.bg, "╚");
+    rp.out(bounds.br_inner(), colors.box_, colors.bg, "╝");
     for x in Range1d::new(inner.l(), inner.r()) {
         for y in Range1d::new(inner.t(), inner.b()) {
-            rp.out(Point { x, y }, Fg::Black, Bg::Black, " ");
+            rp.out(Point { x, y }, Fg::Black, colors.bg, " ");
         }
     }
 }
 
-fn render_led(on: bool, p: Point, rp: &mut RenderPort) {
-    rp.out(p, Fg::Red, Bg::Black, if on { "██" } else { "──" });
+fn render_led(on: bool, colors: &Colors, p: Point, rp: &mut RenderPort) {
+    rp.out(p, colors.led, colors.bg, if on { "██" } else { "──" });
 }
 
-fn render_led_line(mut display: u8, mut p: Point, rp: &mut RenderPort) {
+fn render_led_line(mut display: u8, colors: &Colors, mut p: Point, rp: &mut RenderPort) {
     for _ in 0 .. 8 {
-        render_led(display & 0x01 != 0, p, rp);
+        render_led(display & 0x01 != 0, colors, p, rp);
         display >>= 1;
         p = p.offset(Vector { x: -3, y: 0 });
     }
 }
 
-fn render_leds(computer: &Computer, mut p: Point, rp: &mut RenderPort) {
+fn render_leds(computer: &Computer, colors: &Colors, mut p: Point, rp: &mut RenderPort) {
     for port in 0 .. 3 {
-        render_led_line(computer.peek_port(port), p, rp);
+        render_led_line(computer.peek_port(port), colors, p, rp);
         p = p.offset(Vector { x: 0, y: -3 });
     }
 }
 
-fn render_switch(on: bool, p: Point, rp: &mut RenderPort) {
-    rp.out(p, Fg::Blue, Bg::Black, "┌─┐");
-    rp.out(p.offset(Vector { x: 0, y: 1 }), Fg::Blue, Bg::Black, "│ │");
-    rp.out(p.offset(Vector { x: 0, y: 2 }), Fg::Blue, Bg::Black, "│ │");
-    rp.out(p.offset(Vector { x: 0, y: 3 }), Fg::Blue, Bg::Black, "│ │");
-    rp.out(p.offset(Vector { x: 0, y: 4 }), Fg::Blue, Bg::Black, "│ │");
-    rp.out(p.offset(Vector { x: 0, y: 5 }), Fg::Blue, Bg::Black, "└─┘");
+fn render_switch(on: bool, colors: &Colors, p: Point, rp: &mut RenderPort) {
+    rp.out(p, colors.switch, colors.bg, "┌─┐");
+    rp.out(p.offset(Vector { x: 0, y: 1 }), colors.switch, colors.bg, "│ │");
+    rp.out(p.offset(Vector { x: 0, y: 2 }), colors.switch, colors.bg, "│ │");
+    rp.out(p.offset(Vector { x: 0, y: 3 }), colors.switch, colors.bg, "│ │");
+    rp.out(p.offset(Vector { x: 0, y: 4 }), colors.switch, colors.bg, "│ │");
+    rp.out(p.offset(Vector { x: 0, y: 5 }), colors.switch, colors.bg, "└─┘");
     if on {
-        rp.out(p.offset(Vector { x: 1, y: 1 }), Fg::Blue, Bg::Black, "█");
-        rp.out(p.offset(Vector { x: 1, y: 2 }), Fg::Blue, Bg::Black, "▀");
+        rp.out(p.offset(Vector { x: 1, y: 1 }), colors.switch, colors.bg, "█");
+        rp.out(p.offset(Vector { x: 1, y: 2 }), colors.switch, colors.bg, "▀");
     } else {
-        rp.out(p.offset(Vector { x: 1, y: 3 }), Fg::Blue, Bg::Black, "▄");
-        rp.out(p.offset(Vector { x: 1, y: 4 }), Fg::Blue, Bg::Black, "█");
+        rp.out(p.offset(Vector { x: 1, y: 3 }), colors.switch, colors.bg, "▄");
+        rp.out(p.offset(Vector { x: 1, y: 4 }), colors.switch, colors.bg, "█");
     }
-    rp.out(p.offset(Vector { x: 4, y: 1 }), Fg::LightBlue, Bg::Black, "Auto");
-    rp.out(p.offset(Vector { x: 4, y: 4 }), Fg::LightBlue, Bg::Black, "Step");
+    rp.out(p.offset(Vector { x: 4, y: 1 }), colors.switch_text, colors.bg, "Auto");
+    rp.out(p.offset(Vector { x: 4, y: 4 }), colors.switch_text, colors.bg, "Step");
 }
 
-fn render_reset(p: Point, rp: &mut RenderPort) {
-    rp.out(p, Fg::LightMagenta, Bg::Blue, "  Reset  ");
+fn render_reset(colors: &Colors, p: Point, rp: &mut RenderPort) {
+    rp.out(p, colors.button_text, colors.button, "  Reset  ");
 }
 
-fn render_m_cycle(p: Point, rp: &mut RenderPort) {
-    rp.out(p, Fg::LightMagenta, Bg::Blue, " M.Cycle ");
+fn render_m_cycle(colors: &Colors, p: Point, rp: &mut RenderPort) {
+    rp.out(p, colors.button_text, colors.button, " M.Cycle ");
 }
 
-fn render_key(keyboard: &Keyboard, key: MKey, text: &str, p: Point, rp: &mut RenderPort) {
+fn render_key(keyboard: &Keyboard, key: MKey, text: &str, colors: &Colors, p: Point, rp: &mut RenderPort) {
     let pressed = keyboard.get(key);
     rp.out(
         p.offset(Vector { x: 0, y: -1 }),
-        if pressed { Fg::Black } else { Fg::Cyan },
-        Bg::Black,
+        if pressed { Fg::Black } else { colors.key.try_into().unwrap() },
+        colors.bg,
         "▄▄▄▄"
     );
     rp.out(
         p,
-        if pressed { Fg::Cyan } else { Fg::Black },
-        if pressed { Bg::Black } else { Bg::Cyan },
+        if pressed { colors.key.try_into().unwrap() } else { Fg::Black },
+        if pressed { Bg::Black } else { colors.key },
         text
     );
     rp.out(
         p.offset(Vector { x: 0, y: 1 }),
-        if pressed { Fg::Black } else { Fg::Cyan },
-        Bg::Black,
+        if pressed { Fg::Black } else { colors.key.try_into().unwrap() },
+        colors.bg,
         "▀▀▀▀"
     );
 }
 
-fn render_keys(keyboard: &Keyboard, p: Point, rp: &mut RenderPort) {
-    render_key(keyboard, MKey::KC, "    ", p, rp);
-    render_key(keyboard, MKey::K8, " HB ", p.offset(Vector { x: 0, y: 3 }), rp);
-    render_key(keyboard, MKey::K4, "  4 ", p.offset(Vector { x: 0, y: 6 }), rp);
-    render_key(keyboard, MKey::K0, "  0 ", p.offset(Vector { x: 0, y: 9 }), rp);
-    render_key(keyboard, MKey::KD, "    ", p.offset(Vector { x: 6, y: 0 }), rp);
-    render_key(keyboard, MKey::K9, " LB ", p.offset(Vector { x: 6, y: 3 }), rp);
-    render_key(keyboard, MKey::K5, "  5 ", p.offset(Vector { x: 6, y: 6 }), rp);
-    render_key(keyboard, MKey::K1, "  1 ", p.offset(Vector { x: 6, y: 9 }), rp);
-    render_key(keyboard, MKey::KE, "    ", p.offset(Vector { x: 12, y: 0 }), rp);
-    render_key(keyboard, MKey::KA, "  E ", p.offset(Vector { x: 12, y: 3 }), rp);
-    render_key(keyboard, MKey::K6, "  6 ", p.offset(Vector { x: 12, y: 6 }), rp);
-    render_key(keyboard, MKey::K2, "  2 ", p.offset(Vector { x: 12, y: 9 }), rp);
-    render_key(keyboard, MKey::KF, "    ", p.offset(Vector { x: 18, y: 0 }), rp);
-    render_key(keyboard, MKey::KB, "  R ", p.offset(Vector { x: 18, y: 3 }), rp);
-    render_key(keyboard, MKey::K7, "  7 ", p.offset(Vector { x: 18, y: 6 }), rp);
-    render_key(keyboard, MKey::K3, "  3 ", p.offset(Vector { x: 18, y: 9 }), rp);
+fn render_keys(keyboard: &Keyboard, colors: &Colors, p: Point, rp: &mut RenderPort) {
+    render_key(keyboard, MKey::KC, "    ", colors, p, rp);
+    render_key(keyboard, MKey::K8, " HB ", colors, p.offset(Vector { x: 0, y: 3 }), rp);
+    render_key(keyboard, MKey::K4, "  4 ", colors, p.offset(Vector { x: 0, y: 6 }), rp);
+    render_key(keyboard, MKey::K0, "  0 ", colors, p.offset(Vector { x: 0, y: 9 }), rp);
+    render_key(keyboard, MKey::KD, "    ", colors, p.offset(Vector { x: 6, y: 0 }), rp);
+    render_key(keyboard, MKey::K9, " LB ", colors, p.offset(Vector { x: 6, y: 3 }), rp);
+    render_key(keyboard, MKey::K5, "  5 ", colors, p.offset(Vector { x: 6, y: 6 }), rp);
+    render_key(keyboard, MKey::K1, "  1 ", colors, p.offset(Vector { x: 6, y: 9 }), rp);
+    render_key(keyboard, MKey::KE, "    ", colors, p.offset(Vector { x: 12, y: 0 }), rp);
+    render_key(keyboard, MKey::KA, "  E ", colors, p.offset(Vector { x: 12, y: 3 }), rp);
+    render_key(keyboard, MKey::K6, "  6 ", colors, p.offset(Vector { x: 12, y: 6 }), rp);
+    render_key(keyboard, MKey::K2, "  2 ", colors, p.offset(Vector { x: 12, y: 9 }), rp);
+    render_key(keyboard, MKey::KF, "    ", colors, p.offset(Vector { x: 18, y: 0 }), rp);
+    render_key(keyboard, MKey::KB, "  R ", colors, p.offset(Vector { x: 18, y: 3 }), rp);
+    render_key(keyboard, MKey::K7, "  7 ", colors, p.offset(Vector { x: 18, y: 6 }), rp);
+    render_key(keyboard, MKey::K3, "  3 ", colors, p.offset(Vector { x: 18, y: 9 }), rp);
 }
 
-fn render_cpu_frequency(cpu_frequency_100_k_hz: u16, p: Point, rp: &mut RenderPort) {
+fn render_cpu_frequency(cpu_frequency_100_k_hz: u16, colors: &Colors, p: Point, rp: &mut RenderPort) {
     let mut buf = Buf { bytes: [0; 6], offset: 0 };
     write!(buf, "{:02}", cpu_frequency_100_k_hz).unwrap();
     let text = &mut buf.bytes[.. buf.offset + 1];
     text[text.len() - 1] = replace(&mut text[text.len() - 2], b'.');
     rp.out(
         p.offset(Vector { x: -(text.len() as u16 as i16), y: 0 }),
-        Fg::LightGray, Bg::Black,
+        Fg::LightGray, colors.bg,
         unsafe { str::from_utf8_unchecked(text) }
     );
-    rp.out(p, Fg::LightGray, Bg::Black, " MHz");
+    rp.out(p, Fg::LightGray, colors.bg, " MHz");
 }
 
 fn render(
@@ -201,14 +237,14 @@ fn render(
     let screen_size = tree.screen_size();
     let margin = Thickness::align(Vector { x: 71, y: 14 }, screen_size, HAlign::Center, VAlign::Center);
     let p = margin.shrink_rect(Rect { tl: Point { x: 0, y: 0 }, size: screen_size }).tl;
-    render_box(p, rp);
-    render_leds(&pmevm.computer, p.offset(Vector { x: 64, y: 9 }), rp);
-    render_switch(true, p.offset(Vector { x: 30, y: 4 }), rp);
-    render_reset(p.offset(Vector { x: 30, y: 2 }), rp);
-    render_m_cycle(p.offset(Vector { x: 30, y: 11 }), rp);
-    render_keys(&pmevm.keyboard, p.offset(Vector { x: 3, y: 2 }), rp);
+    render_box(&pmevm.colors, p, rp);
+    render_leds(&pmevm.computer, &pmevm.colors, p.offset(Vector { x: 64, y: 9 }), rp);
+    render_switch(true, &pmevm.colors, p.offset(Vector { x: 30, y: 4 }), rp);
+    render_reset(&pmevm.colors, p.offset(Vector { x: 30, y: 2 }), rp);
+    render_m_cycle(&pmevm.colors, p.offset(Vector { x: 30, y: 11 }), rp);
+    render_keys(&pmevm.keyboard, &pmevm.colors, p.offset(Vector { x: 3, y: 2 }), rp);
     if !pmevm.computer.is_cpu_halted() {
-        render_cpu_frequency(pmevm.cpu_frequency_100_k_hz, p.offset(Vector { x: 62, y: 11 }), rp);
+        render_cpu_frequency(pmevm.cpu_frequency_100_k_hz, &pmevm.colors, p.offset(Vector { x: 62, y: 11 }), rp);
     }
 }
 
@@ -222,6 +258,7 @@ fn main(_: isize, _: *const *const u8) -> isize {
     let screen = unsafe { tuifw_screen::init() }.unwrap();
     let mut windows = WindowTree::new(screen, render);
     let mut pmevm = Pmevm {
+        colors: &GRAY,
         computer: Computer::new(),
         keyboard: Keyboard::new(),
         cpu_frequency_100_k_hz: 0,
