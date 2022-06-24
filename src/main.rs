@@ -253,6 +253,39 @@ const MAX_CPU_FREQUENCY_100_K_HZ: u16 = 10;
 const MAX_TICKS_BALANCE: i32 = 5000 * MAX_CPU_FREQUENCY_100_K_HZ as u32 as i32;
 const KEY_PRESS_MS: u8 = 100;
 
+struct AutoMode {
+    cpu_time: MonoTime,
+    ticks_balance: i32,
+}
+
+impl AutoMode {
+    fn run(&mut self, pmevm: &mut Pmevm) {
+        let cpu_ms = self.cpu_time.split_ms_u16().unwrap_or(u16::MAX);
+        debug_assert!(self.ticks_balance <= 0 && self.ticks_balance >= -i32::from(u8::MAX));
+        assert!(MAX_TICKS_BALANCE >= 0 && i32::MAX - MAX_TICKS_BALANCE > u8::MAX.into());
+        let max_ticks_balance_delta = MAX_TICKS_BALANCE - self.ticks_balance;
+        let ticks_balance_delta = (cpu_ms as u32) * ((100 * MAX_CPU_FREQUENCY_100_K_HZ) as u32);
+        let ticks_balance_delta = if ticks_balance_delta <= max_ticks_balance_delta as u32 {
+            pmevm.cpu_frequency_100_k_hz = MAX_CPU_FREQUENCY_100_K_HZ;
+            ticks_balance_delta as i32
+        } else {
+            let cpu_frequency_100_k_hz = (max_ticks_balance_delta as u32 / cpu_ms as u32) as u16 / 100;
+            assert!(MAX_CPU_FREQUENCY_100_K_HZ != 0 && u16::MAX / MAX_CPU_FREQUENCY_100_K_HZ > 8);
+            pmevm.cpu_frequency_100_k_hz = (7 * pmevm.cpu_frequency_100_k_hz + cpu_frequency_100_k_hz) / 8;
+            max_ticks_balance_delta
+        };
+        self.ticks_balance += ticks_balance_delta;
+        while self.ticks_balance > 0 {
+            pmevm.keyboard.step(&mut pmevm.computer);
+            if let Some(cpu_ticks) = pmevm.computer.step_ticks() {
+                self.ticks_balance -= i32::from(cpu_ticks);
+            } else {
+                self.ticks_balance = 0;
+            };
+        }
+    }
+}
+
 #[start]
 fn main(_: isize, _: *const *const u8) -> isize {
     let screen = unsafe { tuifw_screen::init() }.unwrap();
@@ -267,9 +300,11 @@ fn main(_: isize, _: *const *const u8) -> isize {
     };
     pmevm.computer.poke_program(MONITOR.0);
     let mut time = MonoTime::get();
-    let mut cpu_time = time;
     let mut keyboard_time = [None; 16];
-    let mut ticks_balance: i32 = 0;
+    let mut mode = AutoMode {
+        cpu_time: time,
+        ticks_balance: 0,
+    };
     loop {
         for (key, key_time) in keyboard_time.iter_mut().enumerate() {
             let release = key_time
@@ -326,29 +361,7 @@ fn main(_: isize, _: *const *const u8) -> isize {
             }
         }
         windows.invalidate_screen();
-        let cpu_ms = cpu_time.split_ms_u16().unwrap_or(u16::MAX);
-        debug_assert!(ticks_balance <= 0 && ticks_balance >= -i32::from(u8::MAX));
-        assert!(MAX_TICKS_BALANCE >= 0 && i32::MAX - MAX_TICKS_BALANCE > u8::MAX.into());
-        let max_ticks_balance_delta = MAX_TICKS_BALANCE - ticks_balance;
-        let ticks_balance_delta = (cpu_ms as u32) * ((100 * MAX_CPU_FREQUENCY_100_K_HZ) as u32);
-        let ticks_balance_delta = if ticks_balance_delta <= max_ticks_balance_delta as u32 {
-            pmevm.cpu_frequency_100_k_hz = MAX_CPU_FREQUENCY_100_K_HZ;
-            ticks_balance_delta as i32
-        } else {
-            let cpu_frequency_100_k_hz = (max_ticks_balance_delta as u32 / cpu_ms as u32) as u16 / 100;
-            assert!(MAX_CPU_FREQUENCY_100_K_HZ != 0 && u16::MAX / MAX_CPU_FREQUENCY_100_K_HZ > 8);
-            pmevm.cpu_frequency_100_k_hz = (7 * pmevm.cpu_frequency_100_k_hz + cpu_frequency_100_k_hz) / 8;
-            max_ticks_balance_delta
-        };
-        ticks_balance += ticks_balance_delta;
-        while ticks_balance > 0 {
-            pmevm.keyboard.step(&mut pmevm.computer);
-            if let Some(cpu_ticks) = pmevm.computer.step_ticks() {
-                ticks_balance -= i32::from(cpu_ticks);
-            } else {
-                ticks_balance = 0;
-            };
-        }
+        mode.run(&mut pmevm);
         let ms = time.split_ms_u16().unwrap_or(u16::MAX);
         assert!(FPS != 0 && u16::MAX / FPS > 8);
         pmevm.fps = (7 * pmevm.fps + min(FPS, 1000u16.checked_div(ms).unwrap_or(FPS)) + 4) / 8;
