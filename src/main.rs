@@ -9,7 +9,7 @@
 #![feature(start)]
 #![feature(unsize)]
 
-//#![deny(warnings)]
+#![deny(warnings)]
 #![allow(clippy::assertions_on_constants)]
 
 #![windows_subsystem="console"]
@@ -171,7 +171,7 @@ mod arraybox {
 }
 
 use arraybox::*;
-use core::cmp::{max, min};
+use core::cmp::min;
 use core::fmt::{self, Write};
 use core::mem::{align_of, replace, size_of};
 use core::str::{self};
@@ -374,7 +374,7 @@ fn render(
     let p = margin.shrink_rect(Rect { tl: Point { x: 0, y: 0 }, size: screen_size }).tl;
     render_box(&pmevm.colors, p, rp);
     render_leds(&pmevm.computer, pmevm.cycle, &pmevm.colors, p.offset(Vector { x: 64, y: 9 }), rp);
-    render_switch(true, &pmevm.colors, p.offset(Vector { x: 30, y: 4 }), rp);
+    render_switch(pmevm.cycle.is_none(), &pmevm.colors, p.offset(Vector { x: 30, y: 4 }), rp);
     render_reset(&pmevm.colors, p.offset(Vector { x: 30, y: 2 }), rp);
     render_m_cycle(&pmevm.colors, p.offset(Vector { x: 30, y: 11 }), rp);
     render_keys(&pmevm.keyboard, &pmevm.colors, p.offset(Vector { x: 3, y: 2 }), rp);
@@ -390,6 +390,7 @@ const KEY_PRESS_MS: u8 = 100;
 
 trait Mode {
     fn run(&mut self, pmevm: &mut Pmevm, cycles: u16);
+    fn reset(&mut self, pmevm: &mut Pmevm);
 }
 
 type ModeAlign<const SIZE: usize> = Align8<SIZE>;
@@ -446,6 +447,10 @@ impl Mode for AutoMode {
             };
         }
     }
+
+    fn reset(&mut self, pmevm: &mut Pmevm) {
+        pmevm.cycle = None;
+    }
 }
 
 struct StepMode {
@@ -474,8 +479,13 @@ impl Mode for StepMode {
             self.passed += 1;
         }
     }
-}
 
+    fn reset(&mut self, pmevm: &mut Pmevm) {
+        self.cycles.clear();
+        self.passed = 0;
+        self.run(pmevm, 1);
+    }
+}
 
 #[start]
 fn main(_: isize, _: *const *const u8) -> isize {
@@ -505,9 +515,26 @@ fn main(_: isize, _: *const *const u8) -> isize {
         let cycles = if let Some(event) = WindowTree::update(&mut windows, false, &mut pmevm).unwrap() {
             match event {
                 Event::Key(_, Key::Escape) => break,
-                Event::Key(_, Key::Backspace) => pmevm.computer.reset(),
+                Event::Key(_, Key::Backspace) => {
+                    pmevm.computer.reset();
+                    mode.reset(&mut pmevm);
+                },
                 Event::Key(_, Key::Char('g')) => pmevm.colors = &GRAY,
                 Event::Key(_, Key::Char('c')) => pmevm.colors = &COLOR,
+                Event::Key(_, Key::Char('s')) => {
+                    if pmevm.cycle.is_none() {
+                        mode = ArrayBox::new(StepMode::new());
+                        mode.reset(&mut pmevm);
+                        debug_assert!(pmevm.cycle.is_some());
+                    }
+                },
+                Event::Key(_, Key::Char('a')) => {
+                    if pmevm.cycle.is_some() {
+                        mode = ArrayBox::new(AutoMode::new());
+                        mode.reset(&mut pmevm);
+                        debug_assert!(pmevm.cycle.is_none());
+                    }
+                },
                 _ => { },
             }
             let m_key = match event {
