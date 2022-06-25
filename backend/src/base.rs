@@ -782,8 +782,8 @@ impl Op {
                 computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
                 if let Some(cycles) = cycles {
                     cycles.push(computer.cpu.l);
-                    cycles.push(computer.cpu.h);
                     cycles.push(l);
+                    cycles.push(computer.cpu.h);
                     cycles.push(h);
                 }
             },
@@ -1048,6 +1048,7 @@ impl Op {
                 if let Some(cycles) = cycles {
                     if r == OpReg::M {
                         cycles.push(d);
+                        cycles.push(d);
                     }
                 }
             },
@@ -1058,6 +1059,7 @@ impl Op {
                 computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
                 if let Some(cycles) = cycles {
                     if r == OpReg::M {
+                        cycles.push(d);
                         cycles.push(d);
                     }
                 }
