@@ -372,14 +372,14 @@ fn render(
     let screen_size = tree.screen_size();
     let margin = Thickness::align(Vector { x: 71, y: 14 }, screen_size, HAlign::Center, VAlign::Center);
     let p = margin.shrink_rect(Rect { tl: Point { x: 0, y: 0 }, size: screen_size }).tl;
-    render_box(&pmevm.colors, p, rp);
-    render_leds(&pmevm.computer, pmevm.cycle, &pmevm.colors, p.offset(Vector { x: 64, y: 9 }), rp);
-    render_switch(pmevm.cycle.is_none(), &pmevm.colors, p.offset(Vector { x: 30, y: 4 }), rp);
-    render_reset(&pmevm.colors, p.offset(Vector { x: 30, y: 2 }), rp);
-    render_m_cycle(&pmevm.colors, p.offset(Vector { x: 30, y: 11 }), rp);
-    render_keys(&pmevm.keyboard, &pmevm.colors, p.offset(Vector { x: 3, y: 2 }), rp);
+    render_box(pmevm.colors, p, rp);
+    render_leds(&pmevm.computer, pmevm.cycle, pmevm.colors, p.offset(Vector { x: 64, y: 9 }), rp);
+    render_switch(pmevm.cycle.is_none(), pmevm.colors, p.offset(Vector { x: 30, y: 4 }), rp);
+    render_reset(pmevm.colors, p.offset(Vector { x: 30, y: 2 }), rp);
+    render_m_cycle(pmevm.colors, p.offset(Vector { x: 30, y: 11 }), rp);
+    render_keys(&pmevm.keyboard, pmevm.colors, p.offset(Vector { x: 3, y: 2 }), rp);
     if !pmevm.computer.is_cpu_halted() && pmevm.cycle.is_none() {
-        render_cpu_frequency(pmevm.cpu_frequency_100_k_hz, &pmevm.colors, p.offset(Vector { x: 62, y: 11 }), rp);
+        render_cpu_frequency(pmevm.cpu_frequency_100_k_hz, pmevm.colors, p.offset(Vector { x: 62, y: 11 }), rp);
     }
 }
 
