@@ -1,3 +1,4 @@
+#![feature(const_maybe_uninit_as_mut_ptr)]
 #![feature(const_mut_refs)]
 #![feature(const_ptr_write)]
 #![feature(const_trait_impl)]
@@ -62,11 +63,11 @@ mod arraybox {
 
     pub struct BufFor<T>(MaybeUninit<T>);
 
-    impl<T> Default for BufFor<T> {
+    impl<T> const Default for BufFor<T> {
         fn default() -> BufFor<T> { BufFor(MaybeUninit::uninit()) }
     }
 
-    unsafe impl<T> Buf for BufFor<T> {
+    unsafe impl<T> const Buf for BufFor<T> {
         fn as_ptr(&self) -> *const u8 { self.0.as_ptr() as _ }
         fn as_mut_ptr(&mut self) -> *mut u8 { self.0.as_mut_ptr() as _ }
         fn align() -> usize { align_of::<T>() }
