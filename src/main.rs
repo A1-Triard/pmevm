@@ -1,9 +1,15 @@
+#![feature(const_mut_refs)]
+#![feature(const_ptr_write)]
+#![feature(const_trait_impl)]
 #![feature(default_alloc_error_handler)]
 #![feature(generic_arg_infer)]
 #![feature(lang_items)]
+#![feature(ptr_metadata)]
+#![feature(raw_ref_op)]
 #![feature(start)]
+#![feature(unsize)]
 
-#![deny(warnings)]
+//#![deny(warnings)]
 #![allow(clippy::assertions_on_constants)]
 
 #![windows_subsystem="console"]
@@ -36,11 +42,140 @@ mod no_std {
     extern fn rust_eh_unregister_frames () { }
 }
 
-use core::cmp::min;
+mod arraybox {
+    use core::borrow::{Borrow, BorrowMut};
+    use core::fmt::{self, Debug, Display, Formatter};
+    use core::marker::Unsize;
+    use core::mem::{MaybeUninit, align_of, size_of};
+    use core::ops::{Deref, DerefMut};
+    use core::ptr::{self, Pointee, null};
+
+    /// # Safety
+    ///
+    /// This trait cannot be implemented outside of this module.
+    pub unsafe trait Buf: Default {
+        fn as_ptr(&self) -> *const u8;
+        fn as_mut_ptr(&mut self) -> *mut u8;
+        fn align() -> usize;
+        fn len() -> usize;
+    }
+
+    macro_rules! align_n {
+        (
+            $n:literal
+        ) => {
+            paste::paste! {
+                #[repr(C, align($n))]
+                pub struct [< Align $n >] <const LEN: usize>([MaybeUninit<u8>; LEN]);
+
+                impl<const LEN: usize> const Default for [< Align $n >] <LEN> {
+                    fn default() -> Self { Self(unsafe { MaybeUninit::uninit().assume_init() }) }
+                }
+
+                unsafe impl<const LEN: usize> const Buf for [< Align $n >] <LEN> {
+                    fn align() -> usize { align_of::<Self>() }
+
+                    fn len() -> usize { LEN }
+
+                    fn as_ptr(&self) -> *const u8 {
+                        &raw const self.0 as *const u8
+                    }
+
+                    fn as_mut_ptr(&mut self) -> *mut u8 {
+                        &raw mut self.0 as *mut u8
+                    }
+                }
+            }
+        };
+    }
+
+    align_n!(1);
+    align_n!(2);
+    align_n!(4);
+    align_n!(8);
+    align_n!(16);
+
+    pub struct ArrayBox<T: ?Sized + 'static, B: Buf> {
+        buf: B,
+        metadata: <T as Pointee>::Metadata,
+    }
+
+    impl<T: ?Sized + 'static, B: Buf> Drop for ArrayBox<T, B> {
+        fn drop(&mut self) {
+            unsafe { ptr::drop_in_place(self.as_mut_ptr()) };
+        }
+    }
+
+    impl<T: ?Sized + 'static, B: Buf> ArrayBox<T, B> {
+        pub const fn new<S: Unsize<T>>(source: S) -> Self where B: ~const Buf + ~const Default {
+            assert!(B::align() >= align_of::<S>());
+            assert!(B::len() >= size_of::<S>());
+            let source_null_ptr: *const T = null::<S>();
+            let metadata = source_null_ptr.to_raw_parts().1;
+            let mut res = ArrayBox { buf: B::default(), metadata };
+            unsafe { ptr::write(res.buf.as_mut_ptr() as *mut S, source) };
+            res
+        }
+
+        pub fn as_ptr(&self) -> *const T {
+            let metadata = self.metadata;
+            ptr::from_raw_parts(self.buf.as_ptr() as *const (), metadata)
+        }
+
+        pub fn as_mut_ptr(&mut self) -> *mut T {
+            let metadata = self.metadata;
+            ptr::from_raw_parts_mut(self.buf.as_mut_ptr() as *mut (), metadata)
+        }
+    }
+
+    impl<T: ?Sized + 'static, B: Buf> AsRef<T> for ArrayBox<T, B> {
+        fn as_ref(&self) -> &T {
+            unsafe { &*self.as_ptr() }
+        }
+    }
+
+    impl<T: ?Sized + 'static, B: Buf> AsMut<T> for ArrayBox<T, B> {
+        fn as_mut(&mut self) -> &mut T {
+            unsafe { &mut *self.as_mut_ptr() }
+        }
+    }
+    impl<T: ?Sized + 'static, B: Buf> Borrow<T> for ArrayBox<T, B> {
+        fn borrow(&self) -> &T { self.as_ref() }
+    }
+
+    impl<T: ?Sized + 'static, B: Buf> BorrowMut<T> for ArrayBox<T, B> {
+        fn borrow_mut(&mut self) -> &mut T { self.as_mut() }
+    }
+
+    impl<T: ?Sized + 'static, B: Buf> Deref for ArrayBox<T, B> {
+        type Target = T;
+
+        fn deref(&self) -> &T { self.as_ref() }
+    }
+
+    impl<T: ?Sized + 'static, B: Buf> DerefMut for ArrayBox<T, B> {
+        fn deref_mut(&mut self) -> &mut T { self.as_mut() }
+    }
+
+    impl<T: Debug + ?Sized + 'static, B: Buf> Debug for ArrayBox<T, B> {
+        fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+            self.as_ref().fmt(f)
+        }
+    }
+
+    impl<T: Display + ?Sized + 'static, B: Buf> Display for ArrayBox<T, B> {
+        fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+            self.as_ref().fmt(f)
+        }
+    }
+}
+
+use arraybox::*;
+use core::cmp::{max, min};
 use core::fmt::{self, Write};
-use core::mem::replace;
+use core::mem::{align_of, replace, size_of};
 use core::str::{self};
-use pmevm_backend::{MONITOR, Computer, ComputerProgramExt, Keyboard};
+use pmevm_backend::{MONITOR, Computer, ComputerProgramExt, Keyboard, MachineCycles};
 use pmevm_backend::Key as MKey;
 use timer_no_std::{MonoTime, sleep_ms_u16};
 use tuifw_screen::{Bg, Event, Fg, HAlign, Key, Point};
@@ -253,13 +388,40 @@ const MAX_CPU_FREQUENCY_100_K_HZ: u16 = 10;
 const MAX_TICKS_BALANCE: i32 = 5000 * MAX_CPU_FREQUENCY_100_K_HZ as u32 as i32;
 const KEY_PRESS_MS: u8 = 100;
 
+trait Mode {
+    fn run(&mut self, pmevm: &mut Pmevm, cycles: u16);
+}
+
+type ModeAlign<const SIZE: usize> = Align8<SIZE>;
+
+const fn max_size(a: usize, b: usize) -> usize {
+    if a > b { a } else { b }
+}
+
+const MODE_SIZE: usize = {
+    const X: usize = max_size(size_of::<AutoMode>(), size_of::<StepMode>());
+    assert!(align_of::<ModeAlign<X>>() == max_size(align_of::<AutoMode>(), align_of::<StepMode>()));
+    X
+};
+
+type ModeBuf = ModeAlign<MODE_SIZE>;
+
 struct AutoMode {
     cpu_time: MonoTime,
     ticks_balance: i32,
 }
 
 impl AutoMode {
-    fn run(&mut self, pmevm: &mut Pmevm) {
+    fn new() -> AutoMode {
+        AutoMode {
+            cpu_time: MonoTime::get(),
+            ticks_balance: 0,
+        }
+    }
+}
+
+impl Mode for AutoMode {
+    fn run(&mut self, pmevm: &mut Pmevm, _: u16) {
         let cpu_ms = self.cpu_time.split_ms_u16().unwrap_or(u16::MAX);
         debug_assert!(self.ticks_balance <= 0 && self.ticks_balance >= -i32::from(u8::MAX));
         assert!(MAX_TICKS_BALANCE >= 0 && i32::MAX - MAX_TICKS_BALANCE > u8::MAX.into());
@@ -286,6 +448,35 @@ impl AutoMode {
     }
 }
 
+struct StepMode {
+    cycles: MachineCycles,
+    passed: u8,
+}
+
+impl StepMode {
+    fn new() -> StepMode {
+        StepMode {
+            cycles: MachineCycles::new(),
+            passed: 0,
+        }
+    }
+}
+
+impl Mode for StepMode {
+    fn run(&mut self, pmevm: &mut Pmevm, cycles: u16) {
+        for _ in 0 .. cycles {
+            if self.cycles[self.passed as usize ..].is_empty() {
+                pmevm.keyboard.step(&mut pmevm.computer);
+                self.cycles = pmevm.computer.step_cycles();
+                self.passed = 0;
+            }
+            pmevm.cycle = Some(self.cycles[self.passed as usize]);
+            self.passed += 1;
+        }
+    }
+}
+
+
 #[start]
 fn main(_: isize, _: *const *const u8) -> isize {
     let screen = unsafe { tuifw_screen::init() }.unwrap();
@@ -301,10 +492,7 @@ fn main(_: isize, _: *const *const u8) -> isize {
     pmevm.computer.poke_program(MONITOR.0);
     let mut time = MonoTime::get();
     let mut keyboard_time = [None; 16];
-    let mut mode = AutoMode {
-        cpu_time: time,
-        ticks_balance: 0,
-    };
+    let mut mode: ArrayBox<dyn Mode, ModeBuf> = ArrayBox::new(AutoMode::new());
     loop {
         for (key, key_time) in keyboard_time.iter_mut().enumerate() {
             let release = key_time
@@ -314,7 +502,7 @@ fn main(_: isize, _: *const *const u8) -> isize {
                 pmevm.keyboard.set(MKey::n(key as u8).unwrap(), false);
             }
         }
-        if let Some(event) = WindowTree::update(&mut windows, false, &mut pmevm).unwrap() {
+        let cycles = if let Some(event) = WindowTree::update(&mut windows, false, &mut pmevm).unwrap() {
             match event {
                 Event::Key(_, Key::Escape) => break,
                 Event::Key(_, Key::Backspace) => pmevm.computer.reset(),
@@ -359,9 +547,15 @@ fn main(_: isize, _: *const *const u8) -> isize {
             if let Some(m_key) = m_key {
                 pmevm.keyboard.set(m_key, !pmevm.keyboard.get(m_key));
             }
-        }
+            match event {
+                Event::Key(n, Key::Char(' ')) => n.get(),
+                _ => 0
+            }
+        } else {
+            0
+        };
         windows.invalidate_screen();
-        mode.run(&mut pmevm);
+        mode.run(&mut pmevm, cycles);
         let ms = time.split_ms_u16().unwrap_or(u16::MAX);
         assert!(FPS != 0 && u16::MAX / FPS > 8);
         pmevm.fps = (7 * pmevm.fps + min(FPS, 1000u16.checked_div(ms).unwrap_or(FPS)) + 4) / 8;
