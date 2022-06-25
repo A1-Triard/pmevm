@@ -201,33 +201,24 @@ struct Colors {
     bg: Bg,
     box_: Fg,
     led: Fg,
-    key: Bg,
     button: Bg,
-    button_text: Fg,
     switch: Fg,
-    switch_text: Fg,
 }
 
 const COLOR: Colors = Colors {
     bg: Bg::Black,
     box_: Fg::Green,
     led: Fg::Red,
-    key: Bg::Cyan,
-    button: Bg::Blue,
-    button_text: Fg::LightMagenta,
-    switch: Fg::Blue,
-    switch_text: Fg::LightBlue,
+    button: Bg::Cyan,
+    switch: Fg::Cyan,
 };
 
 const GRAY: Colors = Colors {
     bg: Bg::None,
     box_: Fg::LightGray,
     led: Fg::LightGray,
-    key: Bg::LightGray,
     button: Bg::LightGray,
-    button_text: Fg::Black,
     switch: Fg::LightGray,
-    switch_text: Fg::LightGray,
 };
 
 struct Pmevm {
@@ -295,35 +286,35 @@ fn render_switch(on: bool, colors: &Colors, p: Point, rp: &mut RenderPort) {
         rp.out(p.offset(Vector { x: 1, y: 3 }), colors.switch, colors.bg, "▄");
         rp.out(p.offset(Vector { x: 1, y: 4 }), colors.switch, colors.bg, "█");
     }
-    rp.out(p.offset(Vector { x: 4, y: 1 }), colors.switch_text, colors.bg, "Auto");
-    rp.out(p.offset(Vector { x: 4, y: 4 }), colors.switch_text, colors.bg, "Step");
+    rp.out(p.offset(Vector { x: 4, y: 1 }), colors.switch, colors.bg, "Auto");
+    rp.out(p.offset(Vector { x: 4, y: 4 }), colors.switch, colors.bg, "Step");
 }
 
 fn render_reset(colors: &Colors, p: Point, rp: &mut RenderPort) {
-    rp.out(p, colors.button_text, colors.button, "  Reset  ");
+    rp.out(p, Fg::Black, colors.button, "  Reset  ");
 }
 
 fn render_m_cycle(colors: &Colors, p: Point, rp: &mut RenderPort) {
-    rp.out(p, colors.button_text, colors.button, " M.Cycle ");
+    rp.out(p, Fg::Black, colors.button, " M.Cycle ");
 }
 
 fn render_key(keyboard: &Keyboard, key: MKey, text: &str, colors: &Colors, p: Point, rp: &mut RenderPort) {
     let pressed = keyboard.get(key);
     rp.out(
         p.offset(Vector { x: 0, y: -1 }),
-        if pressed { Fg::Black } else { colors.key.try_into().unwrap() },
+        if pressed { Fg::Black } else { colors.button.try_into().unwrap() },
         colors.bg,
         "▄▄▄▄"
     );
     rp.out(
         p,
-        if pressed { colors.key.try_into().unwrap() } else { Fg::Black },
-        if pressed { Bg::Black } else { colors.key },
+        if pressed { colors.button.try_into().unwrap() } else { Fg::Black },
+        if pressed { Bg::Black } else { colors.button },
         text
     );
     rp.out(
         p.offset(Vector { x: 0, y: 1 }),
-        if pressed { Fg::Black } else { colors.key.try_into().unwrap() },
+        if pressed { Fg::Black } else { colors.button.try_into().unwrap() },
         colors.bg,
         "▀▀▀▀"
     );
