@@ -73,41 +73,6 @@ mod arraybox {
         fn len() -> usize { size_of::<T>() }
     }
 
-    macro_rules! align_n {
-        (
-            $n:literal
-        ) => {
-            paste::paste! {
-                #[repr(C, align($n))]
-                pub struct [< Align $n >] <const LEN: usize>([MaybeUninit<u8>; LEN]);
-
-                impl<const LEN: usize> const Default for [< Align $n >] <LEN> {
-                    fn default() -> Self { Self(unsafe { MaybeUninit::uninit().assume_init() }) }
-                }
-
-                unsafe impl<const LEN: usize> const Buf for [< Align $n >] <LEN> {
-                    fn align() -> usize { align_of::<Self>() }
-
-                    fn len() -> usize { LEN }
-
-                    fn as_ptr(&self) -> *const u8 {
-                        &raw const self.0 as *const u8
-                    }
-
-                    fn as_mut_ptr(&mut self) -> *mut u8 {
-                        &raw mut self.0 as *mut u8
-                    }
-                }
-            }
-        };
-    }
-
-    align_n!(1);
-    align_n!(2);
-    align_n!(4);
-    align_n!(8);
-    align_n!(16);
-
     pub struct ArrayBox<T: ?Sized + 'static, B: Buf> {
         buf: B,
         metadata: <T as Pointee>::Metadata,
