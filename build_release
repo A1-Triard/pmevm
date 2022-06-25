@@ -8,6 +8,6 @@ triple="$(rustc -Vv | awk -F ': ' '{ if($1 == "host") print $2 }')"
 cargo +nightly build \
     -Z build-std=core,alloc,panic_abort \
     -Z build-std-features=panic_immediate_abort \
-    --target "$triple" \
+    --target="$triple" \
     --no-default-features \
     --release
