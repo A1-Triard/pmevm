@@ -60,6 +60,19 @@ mod arraybox {
         fn len() -> usize;
     }
 
+    pub struct BufFor<T>(MaybeUninit<T>);
+
+    impl<T> Default for BufFor<T> {
+        fn default() -> BufFor<T> { BufFor(MaybeUninit::uninit()) }
+    }
+
+    unsafe impl<T> Buf for BufFor<T> {
+        fn as_ptr(&self) -> *const u8 { self.0.as_ptr() as _ }
+        fn as_mut_ptr(&mut self) -> *mut u8 { self.0.as_mut_ptr() as _ }
+        fn align() -> usize { align_of::<T>() }
+        fn len() -> usize { size_of::<T>() }
+    }
+
     macro_rules! align_n {
         (
             $n:literal
@@ -173,7 +186,7 @@ mod arraybox {
 use arraybox::*;
 use core::cmp::min;
 use core::fmt::{self, Write};
-use core::mem::{align_of, replace, size_of};
+use core::mem::{ManuallyDrop, replace};
 use core::str::{self};
 use pmevm_backend::{MONITOR, Computer, ComputerProgramExt, Keyboard, MachineCycles};
 use pmevm_backend::Key as MKey;
@@ -387,19 +400,13 @@ trait Mode {
     fn reset(&mut self, pmevm: &mut Pmevm);
 }
 
-type ModeAlign<const SIZE: usize> = Align8<SIZE>;
-
-const fn max_size(a: usize, b: usize) -> usize {
-    if a > b { a } else { b }
+#[repr(C)]
+union ModeUnion {
+    _auto: ManuallyDrop<AutoMode>,
+    _step: ManuallyDrop<StepMode>,
 }
 
-const MODE_SIZE: usize = {
-    const X: usize = max_size(size_of::<AutoMode>(), size_of::<StepMode>());
-    assert!(align_of::<ModeAlign<X>>() == max_size(align_of::<AutoMode>(), align_of::<StepMode>()));
-    X
-};
-
-type ModeBuf = ModeAlign<MODE_SIZE>;
+type ModeBuf = BufFor<ModeUnion>;
 
 struct AutoMode {
     cpu_time: MonoTime,
