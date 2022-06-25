@@ -378,7 +378,7 @@ fn render(
     render_reset(&pmevm.colors, p.offset(Vector { x: 30, y: 2 }), rp);
     render_m_cycle(&pmevm.colors, p.offset(Vector { x: 30, y: 11 }), rp);
     render_keys(&pmevm.keyboard, &pmevm.colors, p.offset(Vector { x: 3, y: 2 }), rp);
-    if !pmevm.computer.is_cpu_halted() {
+    if !pmevm.computer.is_cpu_halted() && pmevm.cycle.is_none() {
         render_cpu_frequency(pmevm.cpu_frequency_100_k_hz, &pmevm.colors, p.offset(Vector { x: 62, y: 11 }), rp);
     }
 }
