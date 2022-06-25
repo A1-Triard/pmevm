@@ -211,7 +211,7 @@ struct Pmevm {
     keyboard: Keyboard,
     cycle: Option<u8>,
     reset_pressed: bool,
-    //m_cycle_pressed: bool,
+    m_cycle_pressed: bool,
 }
 
 fn render_box(colors: &Colors, p: Point, rp: &mut RenderPort) {
@@ -283,8 +283,13 @@ fn render_reset(pressed: bool, colors: &Colors, p: Point, rp: &mut RenderPort) {
     );
 }
 
-fn render_m_cycle(colors: &Colors, p: Point, rp: &mut RenderPort) {
-    rp.out(p, Fg::Black, colors.button, " M.Cycle ");
+fn render_m_cycle(pressed: bool, colors: &Colors, p: Point, rp: &mut RenderPort) {
+    rp.out(
+        p,
+        if pressed { colors.button.try_into().unwrap() } else { Fg::Black },
+        if pressed { colors.bg } else { colors.button },
+        " M.Cycle "
+    );
 }
 
 fn render_key(keyboard: &Keyboard, key: MKey, text: &str, colors: &Colors, p: Point, rp: &mut RenderPort) {
@@ -356,7 +361,7 @@ fn render(
     render_leds(&pmevm.computer, pmevm.cycle, pmevm.colors, p.offset(Vector { x: 63, y: 9 }), rp);
     render_switch(pmevm.cycle.is_none(), pmevm.colors, p.offset(Vector { x: 29, y: 4 }), rp);
     render_reset(pmevm.reset_pressed, pmevm.colors, p.offset(Vector { x: 29, y: 2 }), rp);
-    render_m_cycle(pmevm.colors, p.offset(Vector { x: 29, y: 11 }), rp);
+    render_m_cycle(pmevm.m_cycle_pressed, pmevm.colors, p.offset(Vector { x: 29, y: 11 }), rp);
     render_keys(&pmevm.keyboard, pmevm.colors, p.offset(Vector { x: 3, y: 2 }), rp);
     if !pmevm.computer.is_cpu_halted() && pmevm.cycle.is_none() {
         render_cpu_frequency(pmevm.cpu_frequency_100_k_hz, pmevm.colors, p.offset(Vector { x: 61, y: 11 }), rp);
@@ -473,13 +478,13 @@ fn main(_: isize, _: *const *const u8) -> isize {
         fps: 0,
         cycle: None,
         reset_pressed: false,
-        //m_cycle_pressed: false,
+        m_cycle_pressed: false,
     };
     pmevm.computer.poke_program(MONITOR.0);
     let mut time = MonoTime::get();
     let mut keyboard_time = [None; 16];
     let mut reset_button_time = None;
-    //let mut m_cycle_button_time = None;
+    let mut m_cycle_button_time = None;
     let mut mode: ArrayBox<dyn Mode, ModeBuf> = ArrayBox::new(AutoMode::new());
     loop {
         for (key, key_time) in keyboard_time.iter_mut().enumerate() {
@@ -498,6 +503,15 @@ fn main(_: isize, _: *const *const u8) -> isize {
         if release_reset_button {
             reset_button_time = None;
             pmevm.reset_pressed = false;
+        }
+        let release_m_cycle_button = if let Some(m_cycle_button_time) = m_cycle_button_time {
+            MonoTime::get().delta_ms_u8(m_cycle_button_time).map_or(true, |x| x >= KEY_PRESS_MS)
+        } else {
+            false
+        };
+        if release_m_cycle_button {
+            m_cycle_button_time = None;
+            pmevm.m_cycle_pressed = false;
         }
         let cycles = if let Some(event) = WindowTree::update(&mut windows, false, &mut pmevm).unwrap() {
             match event {
@@ -564,7 +578,11 @@ fn main(_: isize, _: *const *const u8) -> isize {
                 pmevm.keyboard.set(m_key, !pmevm.keyboard.get(m_key));
             }
             match event {
-                Event::Key(n, Key::Char(' ')) => n.get(),
+                Event::Key(n, Key::Char(' ')) => {
+                    pmevm.m_cycle_pressed = true;
+                    m_cycle_button_time = Some(MonoTime::get());
+                    n.get()
+                },
                 _ => 0
             }
         } else {
