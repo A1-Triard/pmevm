@@ -203,6 +203,7 @@ struct Colors {
     led: Fg,
     button: Bg,
     switch: Fg,
+    info: Fg,
 }
 
 const COLOR: Colors = Colors {
@@ -211,6 +212,7 @@ const COLOR: Colors = Colors {
     led: Fg::Red,
     button: Bg::Cyan,
     switch: Fg::Cyan,
+    info: Fg::LightBlue,
 };
 
 const GRAY: Colors = Colors {
@@ -219,6 +221,7 @@ const GRAY: Colors = Colors {
     led: Fg::LightGray,
     button: Bg::LightGray,
     switch: Fg::LightGray,
+    info: Fg::LightGray,
 };
 
 struct Pmevm {
@@ -231,7 +234,7 @@ struct Pmevm {
 }
 
 fn render_box(colors: &Colors, p: Point, rp: &mut RenderPort) {
-    let bounds = Rect { tl: p, size: Vector { x: 71, y: 14 } };
+    let bounds = Rect { tl: p, size: Vector { x: 70, y: 14 } };
     let inner = Thickness::all(1).shrink_rect(bounds);
     for x in Range1d::new(inner.l(), inner.r()) {
         rp.out(Point { x, y: bounds.t() }, colors.box_, colors.bg, "═");
@@ -346,10 +349,10 @@ fn render_cpu_frequency(cpu_frequency_100_k_hz: u16, colors: &Colors, p: Point, 
     text[text.len() - 1] = replace(&mut text[text.len() - 2], b'.');
     rp.out(
         p.offset(Vector { x: -(text.len() as u16 as i16), y: 0 }),
-        Fg::LightGray, colors.bg,
+        colors.info, colors.bg,
         unsafe { str::from_utf8_unchecked(text) }
     );
-    rp.out(p, Fg::LightGray, colors.bg, " MHz");
+    rp.out(p, colors.info, colors.bg, " MHz");
 }
 
 fn render(
@@ -361,16 +364,16 @@ fn render(
     debug_assert!(window.is_none());
     rp.fill(|rp, p| rp.out(p, Fg::LightGray, Bg::None, " "));
     let screen_size = tree.screen_size();
-    let margin = Thickness::align(Vector { x: 71, y: 14 }, screen_size, HAlign::Center, VAlign::Center);
+    let margin = Thickness::align(Vector { x: 70, y: 14 }, screen_size, HAlign::Center, VAlign::Center);
     let p = margin.shrink_rect(Rect { tl: Point { x: 0, y: 0 }, size: screen_size }).tl;
     render_box(pmevm.colors, p, rp);
-    render_leds(&pmevm.computer, pmevm.cycle, pmevm.colors, p.offset(Vector { x: 64, y: 9 }), rp);
-    render_switch(pmevm.cycle.is_none(), pmevm.colors, p.offset(Vector { x: 30, y: 4 }), rp);
-    render_reset(pmevm.colors, p.offset(Vector { x: 30, y: 2 }), rp);
-    render_m_cycle(pmevm.colors, p.offset(Vector { x: 30, y: 11 }), rp);
+    render_leds(&pmevm.computer, pmevm.cycle, pmevm.colors, p.offset(Vector { x: 63, y: 9 }), rp);
+    render_switch(pmevm.cycle.is_none(), pmevm.colors, p.offset(Vector { x: 29, y: 4 }), rp);
+    render_reset(pmevm.colors, p.offset(Vector { x: 29, y: 2 }), rp);
+    render_m_cycle(pmevm.colors, p.offset(Vector { x: 29, y: 11 }), rp);
     render_keys(&pmevm.keyboard, pmevm.colors, p.offset(Vector { x: 3, y: 2 }), rp);
     if !pmevm.computer.is_cpu_halted() && pmevm.cycle.is_none() {
-        render_cpu_frequency(pmevm.cpu_frequency_100_k_hz, pmevm.colors, p.offset(Vector { x: 62, y: 11 }), rp);
+        render_cpu_frequency(pmevm.cpu_frequency_100_k_hz, pmevm.colors, p.offset(Vector { x: 61, y: 11 }), rp);
     }
 }
 
