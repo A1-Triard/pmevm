@@ -154,90 +154,12 @@ use core::cmp::min;
 use core::fmt::{self, Write};
 use core::mem::{ManuallyDrop, replace};
 use core::str::{self};
-use pmevm_backend::{Program, program, MONITOR, Computer, ComputerProgramExt, Keyboard, MachineCycles};
+use pmevm_backend::{MONITOR, Computer, ComputerProgramExt, Keyboard, MachineCycles};
 use pmevm_backend::Key as MKey;
 use timer_no_std::{MonoTime, sleep_ms_u16};
 use tuifw_screen::{Bg, Event, Fg, HAlign, Key, Point};
 use tuifw_screen::{Range1d, Rect, Thickness, VAlign, Vector};
 use tuifw_window::{RenderPort, Window, WindowTree};
-
-const DIALOG: Program = program! {
-    014 000 041 "      M1: LXI H, TAB        ",
-    014 001 110 "                            ",
-    014 002 014 "                            ",
-    014 003 257 "      M2: XRA A             ",
-    014 004 323 "          OUT 000Q          ",
-    014 005 000 "                            ",
-    014 006 323 "          OUT 001Q          ",
-    014 007 001 "                            ",
-    014 010 323 "          OUT 003Q          ",
-    014 011 003 "                            ",
-    014 012 107 "          MOV B A           ",
-    014 013 117 "          MOV C A           ",
-    014 014 057 "          CMA               ",
-    014 015 323 "          OUT 002Q          ",
-    014 016 002 "                            ",
-    014 017 176 "          MOV A M           ",
-    014 020 267 "          ORA A             ",
-    014 021 312 "          JZ M1             ",
-    014 022 000 "                            ",
-    014 023 014 "                            ",
-    014 024 315 "      M3: CALL DL           ",
-    014 025 277 "                            ",
-    014 026 000 "                            ",
-    014 027 075 "          DCR A             ",
-    014 030 302 "          JNZ M3            ",
-    014 031 024 "                            ",
-    014 032 014 "                            ",
-    014 033 323 "          OUT 002Q          ",
-    014 034 002 "                            ",
-    014 035 333 "      M4: IN 003Q           ",
-    014 036 003 "                            ",
-    014 037 057 "          CMA               ",
-    014 040 267 "          ORA A             ",
-    014 041 312 "          JZ M6             ",
-    014 042 061 "                            ",
-    014 043 014 "                            ",
-    014 044 171 "          MOV A C           ",
-    014 045 323 "          OUT 000Q          ",
-    014 046 000 "                            ",
-    014 047 170 "          MOV A B           ",
-    014 050 323 "          OUT 001Q          ",
-    014 051 001 "                            ",
-    014 052 333 "      M5: IN 003Q           ",
-    014 053 003 "                            ",
-    014 054 057 "          CMA               ",
-    014 055 267 "          ORA A             ",
-    014 056 302 "          JNZ M5            ",
-    014 057 052 "                            ",
-    014 060 014 "                            ",
-    014 061 315 "      M6: CALL DL           ",
-    014 062 277 "                            ",
-    014 063 000 "                            ",
-    014 064 171 "          MOV A C           ",
-    014 065 074 "          INR A             ",
-    014 066 047 "          DAA               ",
-    014 067 117 "          MOV C A           ",
-    014 070 170 "          MOV A B           ",
-    014 071 316 "          ACI 000Q          ",
-    014 072 000 "                            ",
-    014 073 047 "          DAA               ",
-    014 074 107 "          MOV B A           ",
-    014 075 376 "          CPI 005Q          ",
-    014 076 005 "                            ",
-    014 077 332 "          JC M4             ",
-    014 100 035 "                            ",
-    014 101 014 "                            ",
-    014 102 043 "          INX H             ",
-    014 103 303 "          JMP M2            ",
-    014 104 003 "                            ",
-    014 105 014 "                            ",
-    014 110 377 "     TAB:                   ",
-    014 111 200 "                            ",
-    014 112 300 "                            ",
-    014 113 330 "                            ",
-    014 114 000 "                            ",
-};
 
 struct Buf<const LEN: usize> {
     bytes: [u8; LEN],
@@ -559,7 +481,6 @@ fn main(_: isize, _: *const *const u8) -> isize {
         m_cycle_pressed: false,
     };
     pmevm.computer.poke_program(MONITOR.0);
-    pmevm.computer.poke_program(DIALOG.0);
     let mut time = MonoTime::get();
     let mut keyboard_time = [None; 16];
     let mut reset_button_time = None;
