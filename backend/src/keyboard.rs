@@ -58,7 +58,7 @@ impl Keyboard {
             (c_1 || !self.get(Key::KD)) &&
             (c_2 || !self.get(Key::KE)) &&
             (c_3 || !self.get(Key::KF));
-        let answer = ((r_0 as u8) << 3)  | ((r_1 as u8) << 2) | ((r_2 as u8) << 1) | (r_3 as u8);
+        let answer = 0xF0 | ((r_0 as u8) << 3) | ((r_1 as u8) << 2) | ((r_2 as u8) << 1) | (r_3 as u8);
         computer.poke_port(3, answer);
     }
 }
