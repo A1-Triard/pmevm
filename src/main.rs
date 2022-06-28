@@ -34,13 +34,16 @@ mod no_std {
         exit_no_std::exit(b'P')
     }
 
-    #[cfg(all(windows, target_env="gnu", not(feature="debug")))]
     #[no_mangle]
-    extern fn rust_eh_register_frames () { }
+    extern "Rust" fn rust_panicking() -> bool { false }
 
     #[cfg(all(windows, target_env="gnu", not(feature="debug")))]
     #[no_mangle]
-    extern fn rust_eh_unregister_frames () { }
+    extern "C" fn rust_eh_register_frames () { }
+
+    #[cfg(all(windows, target_env="gnu", not(feature="debug")))]
+    #[no_mangle]
+    extern "C" fn rust_eh_unregister_frames () { }
 }
 
 mod arraybox {
