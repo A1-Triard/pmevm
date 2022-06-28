@@ -27,5 +27,5 @@ panicking = { version = "0.3.1", default-features = false }
 paste = "1.0.7"
 pmevm-backend = { path = "backend" }
 timer-no-std = "0.2.1"
-tuifw-screen = "0.15.0"
-tuifw-window = "0.15.0"
+tuifw-screen = "0.15.2"
+tuifw-window = "0.15.2"
