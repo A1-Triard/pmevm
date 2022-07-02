@@ -35,6 +35,7 @@ mod no_std {
     }
 
     #[cfg(windows)]
+    #[no_mangle]
     extern "Rust" fn rust_oom(_: core::alloc::Layout) -> ! {
         exit(b'M')
     }
