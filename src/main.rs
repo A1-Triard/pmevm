@@ -24,18 +24,19 @@ extern crate alloc;
 
 mod no_std {
     use composable_allocators::{AsGlobal, System};
+    use exit_no_std::exit;
 
     #[global_allocator]
     static ALLOCATOR: AsGlobal<System> = AsGlobal(System);
 
     #[panic_handler]
     fn panic(_panic: &core::panic::PanicInfo) -> ! {
-        exit_no_std::exit(b'P')
+        exit(b'P')
     }
 
     #[cfg(windows)]
     extern "Rust" fn rust_oom(_: Layout) -> ! {
-        panic!("Out of heap memory!")
+        exit(b'M')
     }
 
     #[cfg(all(windows, target_env="gnu"))]
