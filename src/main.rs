@@ -33,8 +33,10 @@ mod no_std {
         exit_no_std::exit(b'P')
     }
 
-    #[no_mangle]
-    extern "Rust" fn rust_panicking() -> bool { false }
+    #[cfg(windows)]
+    extern "Rust" fn rust_oom(_: Layout) -> ! {
+        panic!("Out of heap memory!")
+    }
 
     #[cfg(all(windows, target_env="gnu"))]
     #[no_mangle]
