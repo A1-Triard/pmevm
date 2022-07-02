@@ -172,7 +172,7 @@ impl<const LEN: usize> Write for Buf<LEN> {
     fn write_str(&mut self, s: &str) -> fmt::Result {
         let buf = &mut self.bytes[self.offset ..];
         if s.len() > buf.len() { return Err(fmt::Error); }
-        (&mut buf[.. s.len()]).copy_from_slice(s.as_bytes());
+        buf[.. s.len()].copy_from_slice(s.as_bytes());
         self.offset += s.len();
         Ok(())
     }
