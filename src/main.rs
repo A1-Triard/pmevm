@@ -1,3 +1,4 @@
+#![feature(alloc_error_handler)]
 #![feature(const_maybe_uninit_as_mut_ptr)]
 #![feature(const_mut_refs)]
 #![feature(const_ptr_write)]
@@ -35,8 +36,8 @@ mod no_std {
     }
 
     #[cfg(windows)]
-    #[no_mangle]
-    extern "Rust" fn rust_oom(_: core::alloc::Layout) -> ! {
+    #[alloc_error_handler]
+    fn rust_oom(_: core::alloc::Layout) -> ! {
         exit(b'M')
     }
 
