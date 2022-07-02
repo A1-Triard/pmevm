@@ -28,7 +28,6 @@ mod no_std {
     #[global_allocator]
     static ALLOCATOR: AsGlobal<System> = AsGlobal(System);
 
-    #[cfg(not(feature="debug"))]
     #[panic_handler]
     fn panic(_panic: &core::panic::PanicInfo) -> ! {
         exit_no_std::exit(b'P')
@@ -37,11 +36,11 @@ mod no_std {
     #[no_mangle]
     extern "Rust" fn rust_panicking() -> bool { false }
 
-    #[cfg(all(windows, target_env="gnu", not(feature="debug")))]
+    #[cfg(all(windows, target_env="gnu"))]
     #[no_mangle]
     extern "C" fn rust_eh_register_frames () { }
 
-    #[cfg(all(windows, target_env="gnu", not(feature="debug")))]
+    #[cfg(all(windows, target_env="gnu"))]
     #[no_mangle]
     extern "C" fn rust_eh_unregister_frames () { }
 }
