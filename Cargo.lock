@@ -43,9 +43,9 @@ checksum = "4918e6527b7f815a5452188ff06b8b045dae899a3f8dc57e7dd65c3948229170"
 
 [[package]]
 name = "composable-allocators"
-version = "0.1.2"
+version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3e1c1adcd46c24b7f18fad88bdcde1779e8c37a7ce251ec3758b9c6ee3552b82"
+checksum = "d65538456dbb637cee9a5d6ff2d3d72a33666cb6e0f721fab90aea9eb12df98b"
 dependencies = [
  "libc",
  "winapi",
@@ -308,9 +308,9 @@ dependencies = [
 
 [[package]]
 name = "semver"
-version = "1.0.10"
+version = "1.0.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a41d061efea015927ac527063765e73601444cdc344ba855bc7bd44578b25e1c"
+checksum = "a2333e6df6d6598f2b1974829f853c2b4c5f4a6e503c10af918081aa6f8564e1"
 
 [[package]]
 name = "syn"
