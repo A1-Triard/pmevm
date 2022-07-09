@@ -53,7 +53,7 @@ mod no_std {
 mod arraybox {
     use core::borrow::{Borrow, BorrowMut};
     use core::fmt::{self, Debug, Display, Formatter};
-    use core::marker::Unsize;
+    use core::marker::{PhantomData, Unsize};
     use core::mem::{MaybeUninit, align_of, size_of};
     use core::ops::{Deref, DerefMut};
     use core::ptr::{self, Pointee, null};
@@ -81,24 +81,25 @@ mod arraybox {
         fn len() -> usize { size_of::<T>() }
     }
 
-    pub struct ArrayBox<T: ?Sized + 'static, B: Buf> {
+    pub struct ArrayBox<'a, T: ?Sized + 'a, B: Buf> {
         buf: B,
         metadata: <T as Pointee>::Metadata,
+        phantom: PhantomData<&'a T>,
     }
 
-    impl<T: ?Sized + 'static, B: Buf> Drop for ArrayBox<T, B> {
+    impl<'a, T: ?Sized + 'a, B: Buf> Drop for ArrayBox<'a, T, B> {
         fn drop(&mut self) {
             unsafe { ptr::drop_in_place(self.as_mut_ptr()) };
         }
     }
 
-    impl<T: ?Sized + 'static, B: Buf> ArrayBox<T, B> {
+    impl<'a, T: ?Sized + 'a, B: Buf> ArrayBox<'a, T, B> {
         pub const fn new<S: Unsize<T>>(source: S) -> Self where B: ~const Buf + ~const Default {
             assert!(B::align() >= align_of::<S>());
             assert!(B::len() >= size_of::<S>());
             let source_null_ptr: *const T = null::<S>();
             let metadata = source_null_ptr.to_raw_parts().1;
-            let mut res = ArrayBox { buf: B::default(), metadata };
+            let mut res = ArrayBox { buf: B::default(), metadata, phantom: PhantomData };
             unsafe { ptr::write(res.buf.as_mut_ptr() as *mut S, source) };
             res
         }
@@ -114,42 +115,42 @@ mod arraybox {
         }
     }
 
-    impl<T: ?Sized + 'static, B: Buf> AsRef<T> for ArrayBox<T, B> {
+    impl<'a, T: ?Sized + 'a, B: Buf> AsRef<T> for ArrayBox<'a, T, B> {
         fn as_ref(&self) -> &T {
             unsafe { &*self.as_ptr() }
         }
     }
 
-    impl<T: ?Sized + 'static, B: Buf> AsMut<T> for ArrayBox<T, B> {
+    impl<'a, T: ?Sized + 'a, B: Buf> AsMut<T> for ArrayBox<'a, T, B> {
         fn as_mut(&mut self) -> &mut T {
             unsafe { &mut *self.as_mut_ptr() }
         }
     }
-    impl<T: ?Sized + 'static, B: Buf> Borrow<T> for ArrayBox<T, B> {
+    impl<'a, T: ?Sized + 'a, B: Buf> Borrow<T> for ArrayBox<'a, T, B> {
         fn borrow(&self) -> &T { self.as_ref() }
     }
 
-    impl<T: ?Sized + 'static, B: Buf> BorrowMut<T> for ArrayBox<T, B> {
+    impl<'a, T: ?Sized + 'a, B: Buf> BorrowMut<T> for ArrayBox<'a, T, B> {
         fn borrow_mut(&mut self) -> &mut T { self.as_mut() }
     }
 
-    impl<T: ?Sized + 'static, B: Buf> Deref for ArrayBox<T, B> {
+    impl<'a, T: ?Sized + 'a, B: Buf> Deref for ArrayBox<'a, T, B> {
         type Target = T;
 
         fn deref(&self) -> &T { self.as_ref() }
     }
 
-    impl<T: ?Sized + 'static, B: Buf> DerefMut for ArrayBox<T, B> {
+    impl<'a, T: ?Sized + 'a, B: Buf> DerefMut for ArrayBox<'a, T, B> {
         fn deref_mut(&mut self) -> &mut T { self.as_mut() }
     }
 
-    impl<T: Debug + ?Sized + 'static, B: Buf> Debug for ArrayBox<T, B> {
+    impl<'a, T: Debug + ?Sized + 'a, B: Buf> Debug for ArrayBox<'a, T, B> {
         fn fmt(&self, f: &mut Formatter) -> fmt::Result {
             self.as_ref().fmt(f)
         }
     }
 
-    impl<T: Display + ?Sized + 'static, B: Buf> Display for ArrayBox<T, B> {
+    impl<'a, T: Display + ?Sized + 'a, B: Buf> Display for ArrayBox<'a, T, B> {
         fn fmt(&self, f: &mut Formatter) -> fmt::Result {
             self.as_ref().fmt(f)
         }
@@ -163,7 +164,7 @@ use core::mem::{ManuallyDrop, replace};
 use core::str::{self};
 use pmevm_backend::{MONITOR, Computer, ComputerProgramExt, Keyboard, MachineCycles};
 use pmevm_backend::Key as MKey;
-use timer_no_std::{MonoTime, sleep_ms_u16};
+use timer_no_std::{MonoClock, MonoTime};
 use tuifw_screen::{Bg, Event, Fg, HAlign, Key, Point};
 use tuifw_screen::{Range1d, Rect, Thickness, VAlign, Vector};
 use tuifw_window::{RenderPort, Window, WindowTree};
@@ -387,27 +388,27 @@ trait Mode {
 
 #[repr(C)]
 union ModeUnion {
-    _auto: ManuallyDrop<AutoMode>,
+    _auto: ManuallyDrop<AutoMode<'static>>,
     _step: ManuallyDrop<StepMode>,
 }
 
 type ModeBuf = BufFor<ModeUnion>;
 
-struct AutoMode {
-    cpu_time: MonoTime,
+struct AutoMode<'a> {
+    cpu_time: MonoTime<'a>,
     ticks_balance: i32,
 }
 
-impl AutoMode {
-    fn new() -> AutoMode {
+impl<'a> AutoMode<'a> {
+    fn new(clock: &'a MonoClock) -> AutoMode<'a> {
         AutoMode {
-            cpu_time: MonoTime::get(),
+            cpu_time: clock.time(),
             ticks_balance: 0,
         }
     }
 }
 
-impl Mode for AutoMode {
+impl<'a> Mode for AutoMode<'a> {
     fn run(&mut self, pmevm: &mut Pmevm, _: u16) {
         let cpu_ms = self.cpu_time.split_ms_u16().unwrap_or(u16::MAX);
         debug_assert!(self.ticks_balance <= 0 && self.ticks_balance >= -i32::from(u8::MAX));
@@ -475,6 +476,7 @@ impl Mode for StepMode {
 
 #[start]
 fn main(_: isize, _: *const *const u8) -> isize {
+    let clock = unsafe { MonoClock::new() };
     let screen = unsafe { tuifw_screen::init() }.unwrap();
     let mut windows = WindowTree::new(screen, render);
     let mut pmevm = Pmevm {
@@ -488,22 +490,22 @@ fn main(_: isize, _: *const *const u8) -> isize {
         m_cycle_pressed: false,
     };
     pmevm.computer.poke_program(MONITOR.0);
-    let mut time = MonoTime::get();
+    let mut time = clock.time();
     let mut keyboard_time = [None; 16];
     let mut reset_button_time = None;
     let mut m_cycle_button_time = None;
-    let mut mode: ArrayBox<dyn Mode, ModeBuf> = ArrayBox::new(AutoMode::new());
+    let mut mode: ArrayBox<dyn Mode, ModeBuf> = ArrayBox::new(AutoMode::new(&clock));
     loop {
         for (key, key_time) in keyboard_time.iter_mut().enumerate() {
             let release = key_time
-                .map_or(false, |x| MonoTime::get().delta_ms_u8(x).map_or(true, |x| x >= KEY_PRESS_MS));
+                .map_or(false, |x| clock.time().delta_ms_u8(x).map_or(true, |x| x >= KEY_PRESS_MS));
             if release {
                 *key_time = None;
                 pmevm.keyboard.set(MKey::n(key as u8).unwrap(), false);
             }
         }
         let release_reset_button = if let Some(reset_button_time) = reset_button_time {
-            MonoTime::get().delta_ms_u8(reset_button_time).map_or(true, |x| x >= KEY_PRESS_MS)
+            clock.time().delta_ms_u8(reset_button_time).map_or(true, |x| x >= KEY_PRESS_MS)
         } else {
             false
         };
@@ -512,7 +514,7 @@ fn main(_: isize, _: *const *const u8) -> isize {
             pmevm.reset_pressed = false;
         }
         let release_m_cycle_button = if let Some(m_cycle_button_time) = m_cycle_button_time {
-            MonoTime::get().delta_ms_u8(m_cycle_button_time).map_or(true, |x| x >= KEY_PRESS_MS)
+            clock.time().delta_ms_u8(m_cycle_button_time).map_or(true, |x| x >= KEY_PRESS_MS)
         } else {
             false
         };
@@ -524,7 +526,7 @@ fn main(_: isize, _: *const *const u8) -> isize {
             match event {
                 Event::Key(_, Key::Escape) => break,
                 Event::Key(_, Key::Backspace) => {
-                    reset_button_time = Some(MonoTime::get());
+                    reset_button_time = Some(clock.time());
                     pmevm.reset_pressed = true;
                     pmevm.computer.reset();
                     mode.reset(&mut pmevm);
@@ -540,7 +542,7 @@ fn main(_: isize, _: *const *const u8) -> isize {
                 },
                 Event::Key(_, Key::Char('a')) => {
                     if pmevm.cycle.is_some() {
-                        mode = ArrayBox::new(AutoMode::new());
+                        mode = ArrayBox::new(AutoMode::new(&clock));
                         mode.reset(&mut pmevm);
                         debug_assert!(pmevm.cycle.is_none());
                     }
@@ -564,7 +566,7 @@ fn main(_: isize, _: *const *const u8) -> isize {
             };
             if let Some(m_key) = m_key {
                 pmevm.keyboard.set(m_key, true);
-                keyboard_time[m_key as u8 as usize] = Some(MonoTime::get());
+                keyboard_time[m_key as u8 as usize] = Some(clock.time());
             }
             let m_key = match event {
                 Event::Key(_, Key::Char(')')) => Some(MKey::K0),
@@ -587,7 +589,7 @@ fn main(_: isize, _: *const *const u8) -> isize {
             match event {
                 Event::Key(n, Key::Char(' ')) => {
                     pmevm.m_cycle_pressed = true;
-                    m_cycle_button_time = Some(MonoTime::get());
+                    m_cycle_button_time = Some(clock.time());
                     n.get()
                 },
                 _ => 0
@@ -600,7 +602,7 @@ fn main(_: isize, _: *const *const u8) -> isize {
         let ms = time.split_ms_u16().unwrap_or(u16::MAX);
         assert!(FPS != 0 && u16::MAX / FPS > 8);
         pmevm.fps = (7 * pmevm.fps + min(FPS, 1000u16.checked_div(ms).unwrap_or(FPS)) + 4) / 8;
-        sleep_ms_u16((1000 / FPS).saturating_sub(ms));
+        clock.sleep_ms_u16((1000 / FPS).saturating_sub(ms));
     }
     0
 }
