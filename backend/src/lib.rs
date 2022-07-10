@@ -9,6 +9,8 @@
 
 #![no_std]
 
+extern crate alloc;
+
 mod base;
 pub use base::*;
 

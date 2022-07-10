@@ -29,7 +29,7 @@ mod no_std {
     use core::mem::MaybeUninit;
     use exit_no_std::exit;
 
-    const MEM_SIZE: usize = 131072;
+    const MEM_SIZE: usize = 196608;
 
     static mut MEM: [MaybeUninit<u8>; MEM_SIZE] = [MaybeUninit::uninit(); _];
 

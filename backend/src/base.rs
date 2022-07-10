@@ -1,3 +1,5 @@
+use alloc::vec;
+use alloc::vec::Vec;
 use arrayvec::ArrayVec;
 use core::mem::{replace, swap};
 use educe::Educe;
@@ -358,29 +360,20 @@ impl From<u8> for Op {
     }
 }
 
-type MemoryHalf = [u8; (i16::MAX as u16 + 1) as usize];
-
 #[derive(Clone)]
-struct Memory(MemoryHalf, MemoryHalf);
+struct Memory(Vec<Vec<u8>>);
 
 impl Memory {
+    fn new() -> Self {
+        Memory(vec![vec![0; 0x400]; 0x40])
+    }
+
     fn get(&self, addr: u16) -> u8 {
-        let index = addr & 0x7FFF;
-        if index == addr {
-            self.0[index as usize]
-        } else {
-            self.1[index as usize]
-        }
+        self.0[(addr >> 10) as usize][(addr & 0x03FF) as usize]
     }
 
     fn set(&mut self, addr: u16, b: u8) {
-        let index = addr & 0x7FFF;
-        let m = if index == addr {
-            &mut self.0[index as usize]
-        } else {
-            &mut self.1[index as usize]
-        };
-        *m = b;
+        self.0[(addr >> 10) as usize][(addr & 0x03FF) as usize] = b;
     }
 }
 
@@ -515,15 +508,15 @@ pub struct Computer {
     ports: [Port; (u8::MAX as u16 + 1) as usize],
 }
 
-impl const Default for Computer {
+impl Default for Computer {
     fn default() -> Computer { Computer::new() }
 }
 
 impl Computer {
-    pub const fn new() -> Computer {
+    pub fn new() -> Computer {
         Computer {
             cpu: Cpu::new(),
-            mem: Memory([0; _], [0; _]),
+            mem: Memory::new(),
             ports: [Port { in_: 0, out: 0 }; _],
         }
     }
