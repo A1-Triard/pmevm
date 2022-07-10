@@ -43,9 +43,9 @@ checksum = "4918e6527b7f815a5452188ff06b8b045dae899a3f8dc57e7dd65c3948229170"
 
 [[package]]
 name = "composable-allocators"
-version = "0.1.3"
+version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d65538456dbb637cee9a5d6ff2d3d72a33666cb6e0f721fab90aea9eb12df98b"
+checksum = "136da9b797594250c9312f453cd6cb59cfd05e964a865cd3500a9bdf42e6b711"
 dependencies = [
  "libc",
  "winapi",

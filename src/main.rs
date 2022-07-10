@@ -24,11 +24,18 @@ extern { }
 extern crate alloc;
 
 mod no_std {
-    use composable_allocators::{AsGlobal, System};
+    use composable_allocators::{AsGlobal};
+    use composable_allocators::stacked::{self, Stacked};
+    use core::mem::MaybeUninit;
     use exit_no_std::exit;
 
+    const MEM_SIZE: usize = 131072;
+
+    static mut MEM: [MaybeUninit<u8>; MEM_SIZE] = [MaybeUninit::uninit(); _];
+
     #[global_allocator]
-    static ALLOCATOR: AsGlobal<System> = AsGlobal(System);
+    static ALLOCATOR: AsGlobal<Stacked<stacked::CtParams<MEM_SIZE>>> =
+        AsGlobal(Stacked::from_static_array(unsafe { &mut MEM }));
 
     #[panic_handler]
     fn panic(_panic: &core::panic::PanicInfo) -> ! {
