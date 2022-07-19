@@ -219,9 +219,9 @@ checksum = "bade57431f9d41e338c9c908460a02e22a70a8b30fe758856fd026330e956018"
 
 [[package]]
 name = "pc-timer"
-version = "0.0.2"
+version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "93fb575636d4522acf01cab8d3a86c99ca430360cc48c191631810d59a7622f6"
+checksum = "0e8cbf0696b96789aa47b69a1e3a10e452412874bdb666d3f1278299dfe28322"
 dependencies = [
  "pc-ints",
 ]
@@ -325,9 +325,9 @@ dependencies = [
 
 [[package]]
 name = "timer-no-std"
-version = "0.3.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f3ecd6bf61a1742db2dbd33290fa42b86b349f500ab6b912578902435fa7de6e"
+checksum = "2d7adc83a5a74d1821224a5eefb829622c5523169ce84e6dccb7f52853ce639a"
 dependencies = [
  "educe",
  "libc",
@@ -419,9 +419,9 @@ dependencies = [
 
 [[package]]
 name = "unicode-ident"
-version = "1.0.1"
+version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5bd2fe26506023ed7b5e1e315add59d6f584c621d037f9368fea9cfb988f368c"
+checksum = "15c61ba63f9235225a22310255a29b806b907c9b8c964bcbd0a2c70f3f2deea7"
 
 [[package]]
 name = "unicode-width"
@@ -431,9 +431,9 @@ checksum = "3ed742d4ea2bd1176e236172c8429aaf54486e7ac098db29ffe6529e0ce50973"
 
 [[package]]
 name = "widestring"
-version = "1.0.1"
+version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a5ebb1abbff1aa611839e14864856c9fc67d3af74593e3cb79f3d56ffdf9e443"
+checksum = "653f141f39ec16bba3c5abe400a0c60da7468261cc2cbf36805022876bc721a8"
 
 [[package]]
 name = "winapi"

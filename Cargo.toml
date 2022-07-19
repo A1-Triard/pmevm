@@ -25,6 +25,6 @@ exit-no-std = "0.1.2"
 panicking = { version = "0.4.0", default-features = false, features = ["abort"] }
 paste = "1.0.7"
 pmevm-backend = { path = "backend" }
-timer-no-std = "0.3.0"
+timer-no-std = "0.3.1"
 tuifw-screen = "0.16.3"
 tuifw-window = "0.16.3"
