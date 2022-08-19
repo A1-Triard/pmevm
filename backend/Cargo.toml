@@ -7,4 +7,4 @@ publish = false
 [dependencies]
 arrayvec = { version = "0.7.2", default-features = false }
 educe = "0.4.19"
-enumn = "0.1.4"
+enumn = "0.1.5"
