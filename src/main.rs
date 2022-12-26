@@ -3,7 +3,6 @@
 #![feature(const_mut_refs)]
 #![feature(const_ptr_write)]
 #![feature(const_trait_impl)]
-#![feature(default_alloc_error_handler)]
 #![feature(generic_arg_infer)]
 #![feature(lang_items)]
 #![feature(ptr_metadata)]
@@ -68,6 +67,7 @@ mod arraybox {
     /// # Safety
     ///
     /// This trait cannot be implemented outside of this module.
+    #[const_trait]
     pub unsafe trait Buf: Default {
         fn as_ptr(&self) -> *const u8;
         fn as_mut_ptr(&mut self) -> *mut u8;
