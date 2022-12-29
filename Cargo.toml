@@ -21,10 +21,10 @@ strip = true
 
 [dependencies]
 composable-allocators = "0.2.3"
-exit-no-std = "0.1.2"
+exit-no-std = "0.1.4"
 panicking = { version = "0.4.0", default-features = false, features = ["abort"] }
 paste = "1.0.8"
 pmevm-backend = { path = "backend" }
 timer-no-std = "0.3.1"
-tuifw-screen = "0.17.1"
-tuifw-window = "0.17.1"
+tuifw-screen = "0.17.2"
+tuifw-window = "0.17.2"
