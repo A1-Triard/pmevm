@@ -45,7 +45,7 @@ pub struct Program(pub &'static [ProgramLine]);
 impl Display for Program {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         for line in self.0 {
-            writeln!(f, "{}", line)?;
+            writeln!(f, "{line}")?;
         }
         Ok(())
     }

@@ -350,7 +350,7 @@ fn render_keys(keyboard: &Keyboard, colors: &Colors, p: Point, rp: &mut RenderPo
 
 fn render_cpu_frequency(cpu_frequency_100_k_hz: u16, colors: &Colors, p: Point, rp: &mut RenderPort) {
     let mut buf = Buf { bytes: [0; 6], offset: 0 };
-    write!(buf, "{:02}", cpu_frequency_100_k_hz).unwrap();
+    write!(buf, "{cpu_frequency_100_k_hz:02}").unwrap();
     let text = &mut buf.bytes[.. buf.offset + 1];
     text[text.len() - 1] = replace(&mut text[text.len() - 2], b'.');
     rp.out(
