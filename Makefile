@@ -16,8 +16,11 @@ SRC=\
 
 release debug: %: target/$(TARGET)/%/$(BIN)$(EXE_SUFFIX)
 
-dosrelease dosdebug: %: target/$(DOS_TARGET)/%/$(BIN).exe \
-	target/$(DOS_TARGET)/%/CODEPAGE target/$(DOS_TARGET)/%/HDPMI32.EXE target/$(DOS_TARGET)/%/DPMILD32.EXE
+dosrelease: target/$(DOS_TARGET)/release/$(BIN).exe \
+	target/$(DOS_TARGET)/release/CODEPAGE target/$(DOS_TARGET)/release/HDPMI32.EXE target/$(DOS_TARGET)/release/DPMILD32.EXE
+
+dosdebug: target/$(DOS_TARGET)/debug/$(BIN).exe \
+	target/$(DOS_TARGET)/debug/CODEPAGE target/$(DOS_TARGET)/debug/HDPMI32.EXE target/$(DOS_TARGET)/debug/DPMILD32.EXE
 
 rund: debug
 	target/$(TARGET)/debug/$(BIN)$(EXE_SUFFIX)

@@ -1,6 +1,9 @@
 #![deny(warnings)]
 
+use std::env::var;
+
 fn main() {
-    #[cfg(target_os="dos")]
-    dos_cp_generator::build();
+    if var("CARGO_CFG_TARGET_OS").unwrap() == "dos" {
+        dos_cp_generator::build();
+    }
 }

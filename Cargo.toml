@@ -34,5 +34,5 @@ tuifw-window = "0.18.1"
 dos-errno-and-panic = "0.0.1"
 pc-atomics = "0.0.2"
 
-[target.'cfg(target_os="dos")'.build-dependencies]
+[build-dependencies]
 dos-cp-generator = "0.2.1"
