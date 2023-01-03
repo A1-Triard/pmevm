@@ -3,8 +3,10 @@
 #![feature(const_mut_refs)]
 #![feature(const_ptr_write)]
 #![feature(const_trait_impl)]
+#![feature(extern_types)]
 #![feature(generic_arg_infer)]
 #![feature(lang_items)]
+#![feature(panic_info_message)]
 #![feature(ptr_metadata)]
 #![feature(raw_ref_op)]
 #![feature(start)]
@@ -12,23 +14,42 @@
 
 #![deny(warnings)]
 #![allow(clippy::assertions_on_constants)]
+#![allow(dead_code)]
+#![allow(unreachable_code)]
+#![allow(unused_variables)]
+#![allow(unused_imports)]
 
 #![windows_subsystem="console"]
 #![no_std]
-
-#[cfg(windows)]
-#[link(name="msvcrt")]
-extern { }
+#![no_main]
 
 extern crate alloc;
+extern crate dos_errno_and_panic;
+extern crate pc_atomics;
+extern crate rlibc;
 
 mod no_std {
     use composable_allocators::{AsGlobal};
     use composable_allocators::stacked::{self, Stacked};
+    use core::arch::asm;
+    use core::ffi::c_int;
+    use core::fmt::{self, Formatter, Write};
     use core::mem::MaybeUninit;
     use exit_no_std::exit;
+    use pc_ints::*;
 
-    const MEM_SIZE: usize = 196608;
+    #[no_mangle]
+    extern "C" fn _aulldiv() -> ! { panic!("10") }
+    #[no_mangle]
+    extern "C" fn _aullrem() -> ! { panic!("11") }
+    #[no_mangle]
+    extern "C" fn _chkstk() { }
+    #[no_mangle]
+    extern "C" fn _fltused() -> ! { panic!("13") }
+    #[no_mangle]
+    extern "C" fn strlen() -> ! { panic!("14") }
+
+    const MEM_SIZE: usize = 500000;
 
     static mut MEM: [MaybeUninit<u8>; MEM_SIZE] = [MaybeUninit::uninit(); _];
 
@@ -36,26 +57,13 @@ mod no_std {
     static ALLOCATOR: AsGlobal<Stacked<stacked::CtParams<MEM_SIZE>>> =
         AsGlobal(Stacked::from_static_array(unsafe { &mut MEM }));
 
-    #[panic_handler]
-    fn panic(_panic: &core::panic::PanicInfo) -> ! {
-        exit(b'P')
-    }
-
     #[cfg(windows)]
     #[alloc_error_handler]
     fn rust_oom(_: core::alloc::Layout) -> ! {
-        exit(b'M')
+        panic!("OOM")
     }
-
-    #[cfg(all(windows, target_env="gnu"))]
-    #[no_mangle]
-    extern "C" fn rust_eh_register_frames () { }
-
-    #[cfg(all(windows, target_env="gnu"))]
-    #[no_mangle]
-    extern "C" fn rust_eh_unregister_frames () { }
 }
-
+ 
 mod arraybox {
     use core::borrow::{Borrow, BorrowMut};
     use core::fmt::{self, Debug, Display, Formatter};
@@ -481,9 +489,13 @@ impl Mode for StepMode {
     }
 }
 
-#[start]
-fn main(_: isize, _: *const *const u8) -> isize {
-    let clock = unsafe { MonoClock::new() };
+extern {
+    type PEB;
+}
+
+#[allow(non_snake_case)]
+#[no_mangle]
+extern "stdcall" fn mainCRTStartup(_: *const PEB) -> u64 {
     let screen = unsafe { tuifw_screen::init() }.unwrap();
     let mut windows = WindowTree::new(screen, render);
     let mut pmevm = Pmevm {
@@ -497,6 +509,7 @@ fn main(_: isize, _: *const *const u8) -> isize {
         m_cycle_pressed: false,
     };
     pmevm.computer.poke_program(MONITOR.0);
+    let clock = unsafe { MonoClock::new() };
     let mut time = clock.time();
     let mut keyboard_time = [None; 16];
     let mut reset_button_time = None;
