@@ -14,10 +14,6 @@
 
 #![deny(warnings)]
 #![allow(clippy::assertions_on_constants)]
-#![allow(dead_code)]
-#![allow(unreachable_code)]
-#![allow(unused_variables)]
-#![allow(unused_imports)]
 
 #![windows_subsystem="console"]
 #![no_std]
@@ -37,11 +33,7 @@ extern { }
 mod no_std {
     use composable_allocators::{AsGlobal};
     use composable_allocators::stacked::{self, Stacked};
-    use core::arch::asm;
-    use core::ffi::c_int;
-    use core::fmt::{self, Formatter, Write};
     use core::mem::MaybeUninit;
-    use exit_no_std::exit;
 
     const MEM_SIZE: usize = 500000;
 
