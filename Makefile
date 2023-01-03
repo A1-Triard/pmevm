@@ -67,35 +67,35 @@ HXRT216.zip:
 	touch -t 200801011952 HXRT216.zip
 
 target/$(TARGET)/debug/$(BIN)$(EXE_SUFFIX): $(SRC)
-	cargo +nightly build \
+	cargo +nightly build --workspace \
 		--verbose -Z build-std=alloc,core,panic_abort --target $(TARGET)
 
 target/$(TARGET)/release/$(BIN)$(EXE_SUFFIX): $(SRC)
-	cargo +nightly build \
+	cargo +nightly build --workspace \
 		--verbose -Z build-std=alloc,core,panic_abort -Z build-std-features=panic_immediate_abort \
 		--target $(TARGET) --release
 
 target/$(DOS_JSON_TARGET)/debug/$(BIN).exe: $(SRC)
 	RUSTFLAGS="--cfg custom_errno --cfg dos_errno_and_panic --cfg pc_atomics" \
-	cargo +nightly build \
+	cargo +nightly build --workspace \
 		--verbose -Z build-std=alloc,core,panic_abort --target $(DOS_JSON_TARGET).json
 
 target/$(DOS_JSON_TARGET)/release/$(BIN).exe: $(SRC)
 	RUSTFLAGS="--cfg custom_errno --cfg dos_errno_and_panic --cfg pc_atomics" \
-	cargo +nightly build \
+	cargo +nightly build --workspace \
 		--verbose -Z build-std=alloc,core,panic_abort -Z build-std-features=panic_immediate_abort \
 		--target $(DOS_JSON_TARGET).json --release
 
 clippy:
-	cargo +nightly clippy \
+	cargo +nightly clippy --workspace \
 		--verbose -Z build-std=alloc,core,panic_abort -Z build-std-features=panic_immediate_abort \
 		--target $(TARGET)
 
 dosclippy:
 	RUSTFLAGS="--cfg custom_errno --cfg dos_errno_and_panic --cfg pc_atomics" \
-	cargo +nightly clippy \
+	cargo +nightly clippy --workspace \
 		--verbose -Z build-std=alloc,core,panic_abort -Z build-std-features=panic_immediate_abort \
 		--target $(DOS_JSON_TARGET).json
 
 Cargo.lock: Cargo.toml
-	cargo update
+	cargo update --workspace
