@@ -309,7 +309,6 @@ dependencies = [
  "panicking",
  "paste",
  "pc-atomics",
- "pc-ints",
  "pmevm-backend",
  "rlibc",
  "timer-no-std",

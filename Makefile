@@ -1,30 +1,48 @@
-WIN_TARGET=i386-pc-dos-msvc
+DOS_JSON_TARGET=i386-pc-dos-msvc
 DOS_TARGET=i386-pc-dos-hxrt
+TARGET := $(shell rustc -Vv | awk -F ': ' '{ if($$1 == "host") print $$2 }')
+EXE_SUFFIX := $(shell \
+	rustc +nightly -Z unstable-options --print target-spec-json --target $(TARGET) | jq -r '."exe-suffix" // empty' \
+)
 
 BIN=pmevm
 
-.PHONY: debug release rund runr clean clippy
+SRC=\
+	Cargo.toml Cargo.lock src/main.rs build.rs \
+	backend/src/base.rs backend/src/keyboard.rs backend/src/lib.rs backend/src/monitor.rs backend/src/program.rs \
+	backend/Cargo.toml
 
-release debug: %: target/$(DOS_TARGET)/%/$(BIN).exe target/$(DOS_TARGET)/%/CODEPAGE target/$(DOS_TARGET)/%/HDPMI32.EXE target/$(DOS_TARGET)/%/DPMILD32.EXE
+.PHONY: debug release rund runr clippy dosdebug dosrelease dosrund dosrunr clean dosclippy
+
+release debug: %: target/$(TARGET)/%/$(BIN)$(EXE_SUFFIX)
+
+dosrelease dosdebug: %: target/$(DOS_TARGET)/%/$(BIN).exe \
+	target/$(DOS_TARGET)/%/CODEPAGE target/$(DOS_TARGET)/%/HDPMI32.EXE target/$(DOS_TARGET)/%/DPMILD32.EXE
 
 rund: debug
-	dosbox target/$(DOS_TARGET)/debug/$(BIN).exe
+	target/$(TARGET)/debug/$(BIN)$(EXE_SUFFIX)
 
 runr: release
+	target/$(TARGET)/release/$(BIN)$(EXE_SUFFIX)
+
+dosrund: dosdebug
+	dosbox target/$(DOS_TARGET)/debug/$(BIN).exe
+
+dosrunr: dosrelease
 	dosbox target/$(DOS_TARGET)/release/$(BIN).exe
 
 clean:
 	$(RM) -r HXRT216
 	$(RM) -r target
 
-target/$(DOS_TARGET)/%/CODEPAGE: target/$(WIN_TARGET)/%/$(BIN).exe
+target/$(DOS_TARGET)/%/CODEPAGE: target/$(DOS_JSON_TARGET)/%/$(BIN).exe
 	mkdir -p target/$(DOS_TARGET)/$*
-	find target/$(WIN_TARGET)/$*/build -name '$(BIN)-*' -print0 | xargs -0 -I '{}' cp -rf '{}'/out/CODEPAGE target/$(DOS_TARGET)/$*
+	find target/$(DOS_JSON_TARGET)/$*/build -name '$(BIN)-*' -print0 | xargs -0 -I '{}' cp -rf '{}'/out/CODEPAGE target/$(DOS_TARGET)/$*
 	touch target/$(DOS_TARGET)/$*/CODEPAGE
 
-target/$(DOS_TARGET)/%/$(BIN).exe: target/$(WIN_TARGET)/%/$(BIN).exe HXRT216/BIN/PESTUB.EXE HXRT216/BIN/DPMIST32.BIN
+target/$(DOS_TARGET)/%/$(BIN).exe: target/$(DOS_JSON_TARGET)/%/$(BIN).exe HXRT216/BIN/PESTUB.EXE HXRT216/BIN/DPMIST32.BIN
 	mkdir -p target/$(DOS_TARGET)/$*
-	cp -f target/$(WIN_TARGET)/$*/$(BIN).exe target/$(DOS_TARGET)/$*/$(BIN).exe
+	cp -f target/$(DOS_JSON_TARGET)/$*/$(BIN).exe target/$(DOS_TARGET)/$*/$(BIN).exe
 	wine HXRT216/BIN/PESTUB.EXE -v -n -x -s target/$(DOS_TARGET)/$*/$(BIN).exe HXRT216/BIN/DPMIST32.BIN
 	touch target/$(DOS_TARGET)/$*/$(BIN).exe
 
@@ -45,17 +63,36 @@ HXRT216.zip:
 	wget https://www.japheth.de/Download/HX/HXRT216.zip
 	touch -t 200801011952 HXRT216.zip
 
-target/$(WIN_TARGET)/debug/$(BIN).exe: Cargo.toml Cargo.lock src/main.rs build.rs backend/src/base.rs backend/src/keyboard.rs backend/src/lib.rs backend/src/monitor.rs backend/src/program.rs backend/Cargo.toml
-	RUSTFLAGS="--cfg custom_errno --cfg dos_errno_and_panic --cfg pc_atomics" \
-		cargo +nightly build --verbose -Z build-std=alloc,core,panic_abort --target $(WIN_TARGET).json
+target/$(TARGET)/debug/$(BIN)$(EXE_SUFFIX): $(SRC)
+	cargo +nightly build \
+		--verbose -Z build-std=alloc,core,panic_abort --target $(TARGET)
 
-target/$(WIN_TARGET)/release/$(BIN).exe: Cargo.toml Cargo.lock src/main.rs build.rs backend/src/base.rs backend/src/keyboard.rs backend/src/lib.rs backend/src/monitor.rs backend/src/program.rs backend/Cargo.toml
+target/$(TARGET)/release/$(BIN)$(EXE_SUFFIX): $(SRC)
+	cargo +nightly build \
+		--verbose -Z build-std=alloc,core,panic_abort -Z build-std-features=panic_immediate_abort \
+		--target $(TARGET) --release
+
+target/$(DOS_JSON_TARGET)/debug/$(BIN).exe: $(SRC)
 	RUSTFLAGS="--cfg custom_errno --cfg dos_errno_and_panic --cfg pc_atomics" \
-		cargo +nightly build --verbose -Z build-std=alloc,core,panic_abort -Z build-std-features=panic_immediate_abort --target $(WIN_TARGET).json --release
+	cargo +nightly build \
+		--verbose -Z build-std=alloc,core,panic_abort --target $(DOS_JSON_TARGET).json
+
+target/$(DOS_JSON_TARGET)/release/$(BIN).exe: $(SRC)
+	RUSTFLAGS="--cfg custom_errno --cfg dos_errno_and_panic --cfg pc_atomics" \
+	cargo +nightly build \
+		--verbose -Z build-std=alloc,core,panic_abort -Z build-std-features=panic_immediate_abort \
+		--target $(DOS_JSON_TARGET).json --release
 
 clippy:
+	cargo +nightly clippy \
+		--verbose -Z build-std=alloc,core,panic_abort -Z build-std-features=panic_immediate_abort \
+		--target $(TARGET)
+
+dosclippy:
 	RUSTFLAGS="--cfg custom_errno --cfg dos_errno_and_panic --cfg pc_atomics" \
-		cargo +nightly clippy --verbose -Z build-std=alloc,core,panic_abort -Z build-std-features=panic_immediate_abort --target $(WIN_TARGET).json
+	cargo +nightly clippy \
+		--verbose -Z build-std=alloc,core,panic_abort -Z build-std-features=panic_immediate_abort \
+		--target $(DOS_JSON_TARGET).json
 
 Cargo.lock: Cargo.toml
 	cargo update

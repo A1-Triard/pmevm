@@ -24,7 +24,6 @@ composable-allocators = { version = "0.2.3", default-features = false, features 
 exit-no-std = "0.1.4"
 panicking = { version = "0.4.0", default-features = false, features = ["abort"] }
 paste = "1.0.8"
-pc-atomics = "0.0.2"
 pmevm-backend = { path = "backend" }
 rlibc = "1.0.0"
 timer-no-std = "0.3.3"
@@ -33,7 +32,7 @@ tuifw-window = "0.18.1"
 
 [target.'cfg(target_os="dos")'.dependencies]
 dos-errno-and-panic = "0.0.1"
-pc-ints = "0.2.1"
+pc-atomics = "0.0.2"
 
-[build-dependencies]
+[target.'cfg(target_os="dos")'.build-dependencies]
 dos-cp-generator = "0.2.1"

@@ -1,5 +1,6 @@
 #![deny(warnings)]
 
 fn main() {
-    dos_cp_generator::build()
+    #[cfg(target_os="dos")]
+    dos_cp_generator::build();
 }

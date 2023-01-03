@@ -24,7 +24,9 @@
 #![no_main]
 
 extern crate alloc;
+#[cfg(target_os="dos")]
 extern crate dos_errno_and_panic;
+#[cfg(target_os="dos")]
 extern crate pc_atomics;
 extern crate rlibc;
 
@@ -36,18 +38,6 @@ mod no_std {
     use core::fmt::{self, Formatter, Write};
     use core::mem::MaybeUninit;
     use exit_no_std::exit;
-    use pc_ints::*;
-
-    #[no_mangle]
-    extern "C" fn _aulldiv() -> ! { panic!("10") }
-    #[no_mangle]
-    extern "C" fn _aullrem() -> ! { panic!("11") }
-    #[no_mangle]
-    extern "C" fn _chkstk() { }
-    #[no_mangle]
-    extern "C" fn _fltused() -> ! { panic!("13") }
-    #[no_mangle]
-    extern "C" fn strlen() -> ! { panic!("14") }
 
     const MEM_SIZE: usize = 500000;
 
@@ -62,6 +52,26 @@ mod no_std {
     fn rust_oom(_: core::alloc::Layout) -> ! {
         panic!("OOM")
     }
+
+    #[cfg(not(target_os="dos"))]
+    #[panic_handler]
+    fn panic(_panic: &core::panic::PanicInfo) -> ! {
+        exit(b'P')
+    }
+}
+
+#[cfg(target_os="dos")]
+mod dos {
+    #[no_mangle]
+    extern "C" fn _aulldiv() -> ! { panic!("10") }
+    #[no_mangle]
+    extern "C" fn _aullrem() -> ! { panic!("11") }
+    #[no_mangle]
+    extern "C" fn _chkstk() { }
+    #[no_mangle]
+    extern "C" fn _fltused() -> ! { panic!("13") }
+    #[no_mangle]
+    extern "C" fn strlen() -> ! { panic!("14") }
 }
  
 mod arraybox {
