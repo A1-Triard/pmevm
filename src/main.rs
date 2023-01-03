@@ -21,7 +21,7 @@
 
 #![windows_subsystem="console"]
 #![no_std]
-#![no_main]
+#![cfg_attr(target_os="dos", no_main)]
 
 extern crate alloc;
 #[cfg(target_os="dos")]
@@ -29,6 +29,10 @@ extern crate dos_errno_and_panic;
 #[cfg(target_os="dos")]
 extern crate pc_atomics;
 extern crate rlibc;
+
+#[cfg(all(windows, not(target_os="dos")))]
+#[link(name="msvcrt")]
+extern { }
 
 mod no_std {
     use composable_allocators::{AsGlobal};
@@ -499,13 +503,27 @@ impl Mode for StepMode {
     }
 }
 
+#[cfg(target_os="dos")]
 extern {
     type PEB;
 }
 
+#[cfg(not(target_os="dos"))]
+#[start]
+fn main(_: isize, _: *const *const u8) -> isize {
+    start();
+    0
+}
+
+#[cfg(target_os="dos")]
 #[allow(non_snake_case)]
 #[no_mangle]
 extern "stdcall" fn mainCRTStartup(_: *const PEB) -> u64 {
+    start();
+    0
+}
+
+fn start() {
     let screen = unsafe { tuifw_screen::init() }.unwrap();
     let mut windows = WindowTree::new(screen, render);
     let mut pmevm = Pmevm {
@@ -634,5 +652,4 @@ extern "stdcall" fn mainCRTStartup(_: *const PEB) -> u64 {
         pmevm.fps = (7 * pmevm.fps + min(FPS, 1000u16.checked_div(ms).unwrap_or(FPS)) + 4) / 8;
         clock.sleep_ms_u16((1000 / FPS).saturating_sub(ms));
     }
-    0
 }
