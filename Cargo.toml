@@ -21,18 +21,18 @@ strip = true
 
 [dependencies]
 composable-allocators = { version = "0.2.3", default-features = false, features = ["global"] }
-exit-no-std = "0.1.4"
+exit-no-std = "0.2.0"
 panicking = { version = "0.4.0", default-features = false, features = ["abort"] }
 paste = "1.0.8"
 pmevm-backend = { path = "backend" }
 rlibc = "1.0.0"
 timer-no-std = "0.3.3"
-tuifw-screen = "0.18.1"
-tuifw-window = "0.18.1"
+tuifw-screen = { version = "0.18.2", path = "../tuifw/screen" }
+tuifw-window = { version = "0.18.2", path = "../tuifw" }
 
 [target.'cfg(target_os="dos")'.dependencies]
-dos-errno-and-panic = "0.0.1"
+dos-errno-and-panic = "0.0.3"
 pc-atomics = "0.0.2"
 
 [build-dependencies]
-dos-cp-generator = "0.2.1"
+dos-cp-generator = "0.3.1"
