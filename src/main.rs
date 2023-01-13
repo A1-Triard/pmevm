@@ -38,10 +38,10 @@ mod no_std {
     use exit_no_std::exit;
 
     #[cfg(not(target_os="dos"))]
-    const MEM_SIZE: usize = 189887;
+    const MEM_SIZE: usize = 322655;
 
     #[cfg(target_os="dos")]
-    const MEM_SIZE: usize = 66620;
+    const MEM_SIZE: usize = 66884;
 
     static mut MEM: [MaybeUninit<u8>; MEM_SIZE] = [MaybeUninit::uninit(); _];
 
@@ -60,6 +60,13 @@ mod no_std {
     fn panic(_panic: &core::panic::PanicInfo) -> ! {
         exit(b'P')
     }
+
+    const ERROR_MEM_SIZE: usize = 256;
+
+    static mut ERROR_MEM: [MaybeUninit<u8>; ERROR_MEM_SIZE] = [MaybeUninit::uninit(); _];
+
+    pub static ERROR_ALLOCATOR: Stacked<stacked::CtParams<ERROR_MEM_SIZE>> =
+        Stacked::from_static_array(unsafe { &mut ERROR_MEM });
 }
 
 #[cfg(target_os="dos")]
@@ -522,7 +529,7 @@ extern "stdcall" fn mainCRTStartup(_: *const PEB) -> u64 {
 }
 
 fn start() {
-    let screen = unsafe { tuifw_screen::init() }.unwrap();
+    let screen = unsafe { tuifw_screen::init(Some((132, 80)), Some(&no_std::ERROR_ALLOCATOR)) }.unwrap();
     let mut windows = WindowTree::new(screen, render);
     let mut pmevm = Pmevm {
         colors: &COLOR,

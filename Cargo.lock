@@ -205,6 +205,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "itertools"
+version = "0.10.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b0fd2260e829bddf4cb6ea802289de2f86d6a7a690192fbe91b3f46e0f2c8473"
+dependencies = [
+ "either",
+]
+
+[[package]]
 name = "libc"
 version = "0.2.139"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -281,9 +290,9 @@ checksum = "462a1cf1219a30bb8eb060a104ad9b723c4069229be90350262b778f1e7ababb"
 
 [[package]]
 name = "pc-ints"
-version = "0.3.1"
+version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0a3a0755c74e18ec32220df0c2eddb6ef7970a079417e65f22a59710d8992dd1"
+checksum = "282404291842afd51a3f3ad2dc8dfd46519c152e8daeea49245390634f0244a2"
 dependencies = [
  "memoffset",
 ]
@@ -419,8 +428,11 @@ dependencies = [
 
 [[package]]
 name = "tuifw-screen"
-version = "0.18.2"
+version = "0.19.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1937df4901bab52246008ee8476ec7528cf3da979d2b03ace23b9112b7652387"
 dependencies = [
+ "composable-allocators",
  "errno-no-std",
  "tuifw-screen-base",
  "tuifw-screen-dos",
@@ -430,7 +442,9 @@ dependencies = [
 
 [[package]]
 name = "tuifw-screen-base"
-version = "0.18.2"
+version = "0.19.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "24269601285ba75ba19a9a382d2960c322a9609f210be5f5558ad85c1a86230e"
 dependencies = [
  "enum-derive-2018",
  "errno-no-std",
@@ -440,7 +454,9 @@ dependencies = [
 
 [[package]]
 name = "tuifw-screen-dos"
-version = "0.18.2"
+version = "0.19.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9d2c1ea805272949c56720a858ce09be6df2aa03915a0f00b8ce63e13c1f3540"
 dependencies = [
  "dos-cp",
  "either",
@@ -452,11 +468,14 @@ dependencies = [
 
 [[package]]
 name = "tuifw-screen-ncurses"
-version = "0.18.2"
+version = "0.19.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "642f83e828c0529a5bdb71057ffc9f6b50a6911a5f5ba81704541dd1644ba3d4"
 dependencies = [
  "cc",
  "either",
  "errno-no-std",
+ "itertools",
  "libc",
  "panicking",
  "pkg-config",
@@ -466,19 +485,24 @@ dependencies = [
 
 [[package]]
 name = "tuifw-screen-winapi"
-version = "0.18.2"
+version = "0.19.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a4dbbf410997aedce5b1eeb709bf4004e353876dc3d10ba68878e6bd8331e6e1"
 dependencies = [
  "either",
  "errno-no-std",
  "num-traits",
  "panicking",
  "tuifw-screen-base",
+ "unicode-width",
  "winapi",
 ]
 
 [[package]]
 name = "tuifw-window"
-version = "0.18.2"
+version = "0.19.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2296572ae93b82467ada7139017194b60a363a0adafa4d29703eead236f24566"
 dependencies = [
  "components-arena",
  "educe",
