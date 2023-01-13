@@ -194,64 +194,6 @@ pub enum Op {
     Lhld = 0o052,
 }
 
-impl Op {
-    fn ticks(self, psw: Psw) -> u8 {
-        match self {
-            Op::Inr(OpReg::M) => 10,
-            Op::Inr(_) => 5,
-            Op::Dcr(OpReg::M) => 10,
-            Op::Dcr(_) => 5,
-            Op::Mov(OpReg::M, OpReg::M) => 7,
-            Op::Mov(OpReg::M, _) => 7,
-            Op::Mov(_, OpReg::M) => 7,
-            Op::Mov(_, _) => 5,
-            Op::Add(OpReg::M) => 7,
-            Op::Add(_) => 4,
-            Op::Adc(OpReg::M) => 7,
-            Op::Adc(_) => 4,
-            Op::Sub(OpReg::M) => 7,
-            Op::Sub(_) => 4,
-            Op::Sbb(OpReg::M) => 7,
-            Op::Sbb(_) => 4,
-            Op::Ana(OpReg::M) => 7,
-            Op::Ana(_) => 4,
-            Op::Xra(OpReg::M) => 7,
-            Op::Xra(_) => 4,
-            Op::Ora(OpReg::M) => 7,
-            Op::Ora(_) => 4,
-            Op::Cmp(OpReg::M) => 7,
-            Op::Cmp(_) => 4,
-            Op::Inx(_) | Op::Dcx(_) => 5,
-            Op::Dad(_) => 10,
-            Op::Pop(_) => 10,
-            Op::Push(_) => 11,
-            Op::Stax(_) | Op::Ldax(_) => 7,
-            Op::Rcc(cond) => if cond.test(psw) { 11 } else { 5 },
-            Op::Ret | Op::Ret_ => 10,
-            Op::Rlc | Op::Rrc | Op::Ral | Op::Rar => 4,
-            Op::Xchg => 4,
-            Op::Xthl => 18,
-            Op::Sphl | Op::Pchl => 5,
-            Op::Nop(_) => 4,
-            Op::Di | Op::Ei => 4,
-            Op::Daa | Op::Cma => 4,
-            Op::Stc | Op::Cmc => 4,
-            Op::Rst(_) => 11,
-            Op::Adi | Op::Aci | Op::Sui | Op::Sbi | Op::Ani | Op::Xri | Op::Ori | Op::Cpi => 7,
-            Op::In | Op::Out => 10,
-            Op::Mvi(OpReg::M) => 10,
-            Op::Mvi(_) => 7,
-            Op::Jcc(_) => 10,
-            Op::Jmp | Op::Jmp_ => 10,
-            Op::Ccc(cond) => if cond.test(psw) { 17 } else { 11 },
-            Op::Call(_) => 17,
-            Op::Lxi(_) => 10,
-            Op::Sta | Op::Lda => 13,
-            Op::Shld | Op::Lhld => 16,
-        }
-    }
-}
-
 impl From<Op> for u8 {
     fn from(op: Op) -> u8 {
         match op {
@@ -600,9 +542,7 @@ impl Computer {
     pub fn step_ticks(&mut self) -> Option<u8> {
         if self.cpu.halted { return None; }
         let op = self.mem.get(self.cpu.pc);
-        let ticks = Op::from(op).ticks(self.cpu.psw);
-        EXEC[usize::from(op)](op, self, None);
-        Some(ticks)
+        Some(EXEC[usize::from(op)](op, self, None))
     }
 }
 
@@ -627,14 +567,14 @@ fn execute_sub(computer: &mut Computer, a: u8, d: u8, c: bool) -> u8 {
     computer.cpu.psw.check(a);
     a
 }
-
 #[allow(non_snake_case)]
-fn exec_0X0_nop(_op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) {
+fn exec_0X0_nop(_op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) -> u8 {
     computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+    4
 }
 
 #[allow(non_snake_case)]
-fn exec_0E1_lxi(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+fn exec_0E1_lxi(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) -> u8 {
     let rp = OpRegPair::n((op_code >> 3) & 0x06).unwrap();
     let d = computer.load_word();
     computer.set_reg_pair(rp, d);
@@ -643,10 +583,11 @@ fn exec_0E1_lxi(op_code: u8, computer: &mut Computer, cycles: Option<&mut Machin
         cycles.push(d as u8);
         cycles.push((d >> 8) as u8);
     }
+    10
 }
 
 #[allow(non_snake_case)]
-fn exec_0O1_dad(op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) {
+fn exec_0O1_dad(op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) -> u8 {
     let rp = OpRegPair::n((op_code >> 3) & 0x06).unwrap();
     let d = computer.reg_pair(rp);
     let hl = ((computer.cpu.h as u16) << 8) | (computer.cpu.l as u16);
@@ -655,10 +596,11 @@ fn exec_0O1_dad(op_code: u8, computer: &mut Computer, _cycles: Option<&mut Machi
     computer.cpu.h = (sum >> 8) as u8;
     computer.cpu.l = sum as u8;
     computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+    10
 }
 
 #[allow(non_snake_case)]
-fn exec_0F2_stax(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+fn exec_0F2_stax(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) -> u8 {
     let rp = OpExtReg::n((op_code >> 3) & 0x06).unwrap();
     let addr = computer.ext_reg(rp);
     computer.mem.set(addr, computer.cpu.a);
@@ -666,10 +608,11 @@ fn exec_0F2_stax(op_code: u8, computer: &mut Computer, cycles: Option<&mut Machi
     if let Some(cycles) = cycles {
         cycles.push(computer.cpu.a);
     }
+    7
 }
 
 #[allow(non_snake_case)]
-fn exec_0P2_ldax(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+fn exec_0P2_ldax(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) -> u8 {
     let rp = OpExtReg::n((op_code >> 3) & 0x06).unwrap();
     let addr = computer.ext_reg(rp);
     computer.cpu.a = computer.mem.get(addr);
@@ -677,10 +620,11 @@ fn exec_0P2_ldax(op_code: u8, computer: &mut Computer, cycles: Option<&mut Machi
     if let Some(cycles) = cycles {
         cycles.push(computer.cpu.a);
     }
+    7
 }
 
 #[allow(non_snake_case)]
-fn exec_042_shld(_op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+fn exec_042_shld(_op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) -> u8 {
     let addr = computer.load_word();
     computer.mem.set(addr, computer.cpu.l);
     computer.mem.set(addr.wrapping_add(1), computer.cpu.h);
@@ -691,10 +635,11 @@ fn exec_042_shld(_op_code: u8, computer: &mut Computer, cycles: Option<&mut Mach
         cycles.push(computer.cpu.l);
         cycles.push(computer.cpu.h);
     }
+    16
 }
 
 #[allow(non_snake_case)]
-fn exec_052_lhld(_op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+fn exec_052_lhld(_op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) -> u8 {
     let addr = computer.load_word();
     computer.cpu.l = computer.mem.get(addr);
     computer.cpu.h = computer.mem.get(addr.wrapping_add(1));
@@ -705,10 +650,11 @@ fn exec_052_lhld(_op_code: u8, computer: &mut Computer, cycles: Option<&mut Mach
         cycles.push(computer.cpu.l);
         cycles.push(computer.cpu.h);
     }
+    16
 }
 
 #[allow(non_snake_case)]
-fn exec_062_sta(_op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+fn exec_062_sta(_op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) -> u8 {
     let addr = computer.load_word();
     computer.mem.set(addr, computer.cpu.a);
     computer.cpu.pc = computer.cpu.pc.wrapping_add(3);
@@ -717,10 +663,11 @@ fn exec_062_sta(_op_code: u8, computer: &mut Computer, cycles: Option<&mut Machi
         cycles.push((addr >> 8) as u8);
         cycles.push(computer.cpu.a);
     }
+    13
 }
 
 #[allow(non_snake_case)]
-fn exec_072_lda(_op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+fn exec_072_lda(_op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) -> u8 {
     let addr = computer.load_word();
     computer.cpu.a = computer.mem.get(addr);
     computer.cpu.pc = computer.cpu.pc.wrapping_add(3);
@@ -729,26 +676,29 @@ fn exec_072_lda(_op_code: u8, computer: &mut Computer, cycles: Option<&mut Machi
         cycles.push((addr >> 8) as u8);
         cycles.push(computer.cpu.a);
     }
+    13
 }
 
 #[allow(non_snake_case)]
-fn exec_0E3_inx(op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) {
+fn exec_0E3_inx(op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) -> u8 {
     let rp = OpRegPair::n((op_code >> 3) & 0x06).unwrap();
     let d = computer.reg_pair(rp);
     computer.set_reg_pair(rp, d.wrapping_add(1));
     computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+    5
 }
 
 #[allow(non_snake_case)]
-fn exec_0O3_dcx(op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) {
+fn exec_0O3_dcx(op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) -> u8 {
     let rp = OpRegPair::n((op_code >> 3) & 0x06).unwrap();
     let d = computer.reg_pair(rp);
     computer.set_reg_pair(rp, d.wrapping_sub(1));
     computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+    5
 }
 
 #[allow(non_snake_case)]
-fn exec_0X4_inr(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+fn exec_0X4_inr(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) -> u8 {
     let r = OpReg::n((op_code >> 3) & 0x07).unwrap();
     let d = computer.reg(r);
     let a = execute_add(computer, d, 1, false);
@@ -760,10 +710,11 @@ fn exec_0X4_inr(op_code: u8, computer: &mut Computer, cycles: Option<&mut Machin
             cycles.push(d);
         }
     }
+    if r == OpReg::M { 10 } else { 5 }
 }
 
 #[allow(non_snake_case)]
-fn exec_0X5_dcr(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+fn exec_0X5_dcr(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) -> u8 {
     let r = OpReg::n((op_code >> 3) & 0x07).unwrap();
     let d = computer.reg(r);
     let a = execute_sub(computer, d, 1, false);
@@ -775,10 +726,11 @@ fn exec_0X5_dcr(op_code: u8, computer: &mut Computer, cycles: Option<&mut Machin
             cycles.push(d);
         }
     }
+    if r == OpReg::M { 10 } else { 5 }
 }
-
+ 
 #[allow(non_snake_case)]
-fn exec_0X6_mvi(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+fn exec_0X6_mvi(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) -> u8 {
     let r = OpReg::n((op_code >> 3) & 0x07).unwrap();
     let d = computer.load_byte();
     computer.set_reg(r, d);
@@ -789,42 +741,47 @@ fn exec_0X6_mvi(op_code: u8, computer: &mut Computer, cycles: Option<&mut Machin
             cycles.push(d);
         }
     }
+    if r == OpReg::M { 10 } else { 7 }
 }
 
 #[allow(non_snake_case)]
-fn exec_007_rlc(_op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) {
+fn exec_007_rlc(_op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) -> u8 {
     let carry = computer.cpu.a >> 7;
     computer.cpu.a = (computer.cpu.a << 1) | carry;
     computer.cpu.psw.set_carry(carry != 0);
     computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+    4
 }
 
 #[allow(non_snake_case)]
-fn exec_017_rrc(_op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) {
+fn exec_017_rrc(_op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) -> u8 {
     let carry = computer.cpu.a << 7;
     computer.cpu.a = (computer.cpu.a >> 1) | carry;
     computer.cpu.psw.set_carry(carry != 0);
     computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+    4
 }
 
 #[allow(non_snake_case)]
-fn exec_027_ral(_op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) {
+fn exec_027_ral(_op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) -> u8 {
     let carry = computer.cpu.a >> 7;
     computer.cpu.a = (computer.cpu.a << 1) | computer.cpu.psw.carry() as u8;
     computer.cpu.psw.set_carry(carry != 0);
     computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+    4
 }
 
 #[allow(non_snake_case)]
-fn exec_037_rar(_op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) {
+fn exec_037_rar(_op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) -> u8 {
     let carry = computer.cpu.a << 7;
     computer.cpu.a = (computer.cpu.a >> 1) | ((computer.cpu.psw.carry() as u8) << 7);
     computer.cpu.psw.set_carry(carry != 0);
     computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+    4
 }
 
 #[allow(non_snake_case)]
-fn exec_047_daa(_op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) {
+fn exec_047_daa(_op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) -> u8 {
     let aux = computer.cpu.psw.aux_carry() as u8;
     let carry = (computer.cpu.psw.carry() as u8) << 4;
     let mut l = (computer.cpu.a & 0x0F) | (aux << 4);
@@ -839,33 +796,38 @@ fn exec_047_daa(_op_code: u8, computer: &mut Computer, _cycles: Option<&mut Mach
     computer.cpu.a = (h << 4) | l;
     computer.cpu.psw.check(computer.cpu.a);
     computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+    4
 }
 
 #[allow(non_snake_case)]
-fn exec_057_cma(_op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) {
+fn exec_057_cma(_op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) -> u8 {
     computer.cpu.a = !computer.cpu.a;
     computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+    4
 }
 
 #[allow(non_snake_case)]
-fn exec_067_stc(_op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) {
+fn exec_067_stc(_op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) -> u8 {
     computer.cpu.psw.set_carry(true);
     computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+    4
 }
 
 #[allow(non_snake_case)]
-fn exec_077_cmc(_op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) {
+fn exec_077_cmc(_op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) -> u8 {
     computer.cpu.psw.set_carry(!computer.cpu.psw.carry());
     computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+    4
 }
 
 #[allow(non_snake_case)]
-fn exec_166_hlt(_op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) {
+fn exec_166_hlt(_op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) -> u8 {
     computer.cpu.halted = true;
+    7
 }
 
 #[allow(non_snake_case)]
-fn exec_1XX_mov(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+fn exec_1XX_mov(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) -> u8 {
     let rd = OpReg::n((op_code >> 3) & 0x07).unwrap();
     let rs = OpReg::n(op_code & 0x07).unwrap();
     let d = computer.reg(rs);
@@ -876,10 +838,11 @@ fn exec_1XX_mov(op_code: u8, computer: &mut Computer, cycles: Option<&mut Machin
             cycles.push(d);
         }
     }
+    if rs == OpReg::M || rd == OpReg::M { 7 } else { 5 }
 }
 
 #[allow(non_snake_case)]
-fn exec_20X_add(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+fn exec_20X_add(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) -> u8 {
     let r = OpReg::n(op_code & 0x07).unwrap();
     let d = computer.reg(r);
     let a = computer.cpu.a;
@@ -890,10 +853,11 @@ fn exec_20X_add(op_code: u8, computer: &mut Computer, cycles: Option<&mut Machin
             cycles.push(d);
         }
     }
+    if r == OpReg::M { 7 } else { 4 }
 }
 
 #[allow(non_snake_case)]
-fn exec_21X_adc(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+fn exec_21X_adc(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) -> u8 {
     let r = OpReg::n(op_code & 0x07).unwrap();
     let d = computer.reg(r);
     let a = computer.cpu.a;
@@ -905,10 +869,11 @@ fn exec_21X_adc(op_code: u8, computer: &mut Computer, cycles: Option<&mut Machin
             cycles.push(d);
         }
     }
+    if r == OpReg::M { 7 } else { 4 }
 }
 
 #[allow(non_snake_case)]
-fn exec_22X_sub(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+fn exec_22X_sub(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) -> u8 {
     let r = OpReg::n(op_code & 0x07).unwrap();
     let d = computer.reg(r);
     let a = computer.cpu.a;
@@ -920,10 +885,11 @@ fn exec_22X_sub(op_code: u8, computer: &mut Computer, cycles: Option<&mut Machin
             cycles.push(d);
         }
     }
+    if r == OpReg::M { 7 } else { 4 }
 }
 
 #[allow(non_snake_case)]
-fn exec_23X_sbb(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+fn exec_23X_sbb(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) -> u8 {
     let r = OpReg::n(op_code & 0x07).unwrap();
     let d = computer.reg(r);
     let a = computer.cpu.a;
@@ -936,10 +902,11 @@ fn exec_23X_sbb(op_code: u8, computer: &mut Computer, cycles: Option<&mut Machin
             cycles.push(d);
         }
     }
+    if r == OpReg::M { 7 } else { 4 }
 }
 
 #[allow(non_snake_case)]
-fn exec_24X_ana(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+fn exec_24X_ana(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) -> u8 {
     let r = OpReg::n(op_code & 0x07).unwrap();
     let d = computer.reg(r);
     computer.cpu.psw.set_aux_carry(false);
@@ -952,10 +919,11 @@ fn exec_24X_ana(op_code: u8, computer: &mut Computer, cycles: Option<&mut Machin
             cycles.push(d);
         }
     }
+    if r == OpReg::M { 7 } else { 4 }
 }
 
 #[allow(non_snake_case)]
-fn exec_25X_xra(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+fn exec_25X_xra(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) -> u8 {
     let r = OpReg::n(op_code & 0x07).unwrap();
     let d = computer.reg(r);
     computer.cpu.psw.set_aux_carry(false);
@@ -968,10 +936,11 @@ fn exec_25X_xra(op_code: u8, computer: &mut Computer, cycles: Option<&mut Machin
             cycles.push(d);
         }
     }
+    if r == OpReg::M { 7 } else { 4 }
 }
 
 #[allow(non_snake_case)]
-fn exec_26X_ora(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+fn exec_26X_ora(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) -> u8 {
     let r = OpReg::n(op_code & 0x07).unwrap();
     let d = computer.reg(r);
     computer.cpu.psw.set_aux_carry(false);
@@ -984,10 +953,11 @@ fn exec_26X_ora(op_code: u8, computer: &mut Computer, cycles: Option<&mut Machin
             cycles.push(d);
         }
     }
+    if r == OpReg::M { 7 } else { 4 }
 }
 
 #[allow(non_snake_case)]
-fn exec_27X_cmp(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+fn exec_27X_cmp(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) -> u8 {
     let r = OpReg::n(op_code & 0x07).unwrap();
     let d = computer.reg(r);
     let a = computer.cpu.a;
@@ -998,20 +968,23 @@ fn exec_27X_cmp(op_code: u8, computer: &mut Computer, cycles: Option<&mut Machin
             cycles.push(d);
         }
     }
+    if r == OpReg::M { 7 } else { 4 }
 }
 
 #[allow(non_snake_case)]
-fn exec_3X0_rcc(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+fn exec_3X0_rcc(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) -> u8 {
     let cond = OpCond::n((op_code >> 3) & 0x07).unwrap();
     if cond.test(computer.cpu.psw) {
         exec_3P1_ret(op_code, computer, cycles);
+        11
     } else {
         computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+        5
     }
 }
 
 #[allow(non_snake_case)]
-fn exec_3E1_pop(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+fn exec_3E1_pop(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) -> u8 {
     let rp = OpRegWord::n((op_code >> 3) & 0x06).unwrap();
     let l = computer.mem.get(computer.cpu.sp);
     let h = computer.mem.get(computer.cpu.sp.wrapping_add(1));
@@ -1022,10 +995,11 @@ fn exec_3E1_pop(op_code: u8, computer: &mut Computer, cycles: Option<&mut Machin
         cycles.push(l);
         cycles.push(h);
     }
+    10
 }
 
 #[allow(non_snake_case)]
-fn exec_3P1_ret(_op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+fn exec_3P1_ret(_op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) -> u8 {
     let l = computer.mem.get(computer.cpu.sp);
     let h = computer.mem.get(computer.cpu.sp.wrapping_add(1));
     computer.cpu.pc = ((h as u16) << 8) | (l as u16);
@@ -1034,41 +1008,46 @@ fn exec_3P1_ret(_op_code: u8, computer: &mut Computer, cycles: Option<&mut Machi
         cycles.push(l);
         cycles.push(h);
     }
+    10
 }
 
 #[allow(non_snake_case)]
-fn exec_351_pchl(_op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) {
+fn exec_351_pchl(_op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) -> u8 {
     computer.cpu.pc = ((computer.cpu.h as u16) << 8) | (computer.cpu.l as u16);
+    5
 }
 
 #[allow(non_snake_case)]
-fn exec_371_sphl(_op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) {
+fn exec_371_sphl(_op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) -> u8 {
     computer.cpu.sp = ((computer.cpu.h as u16) << 8) | (computer.cpu.l as u16);
     computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+    5
 }
 
 #[allow(non_snake_case)]
-fn exec_3X2_jcc(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+fn exec_3X2_jcc(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) -> u8 {
     let cond = OpCond::n((op_code >> 3) & 0x07).unwrap();
     if cond.test(computer.cpu.psw) {
         exec_3Z3_jmp(op_code, computer, cycles);
     } else {
         computer.cpu.pc = computer.cpu.pc.wrapping_add(3);
     }
+    10
 }
 
 #[allow(non_snake_case)]
-fn exec_3Z3_jmp(_op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+fn exec_3Z3_jmp(_op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) -> u8 {
     let addr = computer.load_word();
     computer.cpu.pc = addr;
     if let Some(cycles) = cycles {
         cycles.push(addr as u8);
         cycles.push((addr >> 8) as u8);
     }
+    10
 }
 
 #[allow(non_snake_case)]
-fn exec_323_out(_op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+fn exec_323_out(_op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) -> u8 {
     let port = computer.load_byte();
     computer.cpu.pc = computer.cpu.pc.wrapping_add(2);
     computer.ports[port as usize].out = computer.cpu.a;
@@ -1076,10 +1055,11 @@ fn exec_323_out(_op_code: u8, computer: &mut Computer, cycles: Option<&mut Machi
         cycles.push(port);
         cycles.push(computer.cpu.a);
     }
+    10
 }
 
 #[allow(non_snake_case)]
-fn exec_333_in(_op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+fn exec_333_in(_op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) -> u8 {
     let port = computer.load_byte();
     computer.cpu.a = computer.ports[port as usize].in_;
     computer.cpu.pc = computer.cpu.pc.wrapping_add(2);
@@ -1087,10 +1067,11 @@ fn exec_333_in(_op_code: u8, computer: &mut Computer, cycles: Option<&mut Machin
         cycles.push(port);
         cycles.push(computer.cpu.a);
     }
+    10
 }
 
 #[allow(non_snake_case)]
-fn exec_343_xthl(_op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+fn exec_343_xthl(_op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) -> u8 {
     let l = computer.mem.get(computer.cpu.sp);
     let h = computer.mem.get(computer.cpu.sp.wrapping_add(1));
     let l = replace(&mut computer.cpu.l, l);
@@ -1104,39 +1085,45 @@ fn exec_343_xthl(_op_code: u8, computer: &mut Computer, cycles: Option<&mut Mach
         cycles.push(computer.cpu.h);
         cycles.push(h);
     }
+    18
 }
 
 #[allow(non_snake_case)]
-fn exec_353_xchg(_op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) {
+fn exec_353_xchg(_op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) -> u8 {
     swap(&mut computer.cpu.h, &mut computer.cpu.d);
     swap(&mut computer.cpu.l, &mut computer.cpu.e);
     computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+    4
 }
 
 #[allow(non_snake_case)]
-fn exec_363_di(_op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) {
+fn exec_363_di(_op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) -> u8 {
     computer.cpu.interrupts_enabled = false;
     computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+    4
 }
 
 #[allow(non_snake_case)]
-fn exec_373_ei(_op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) {
+fn exec_373_ei(_op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) -> u8 {
     computer.cpu.interrupts_enabled = true;
     computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+    4
 }
 
 #[allow(non_snake_case)]
-fn exec_3X4_ccc(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+fn exec_3X4_ccc(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) -> u8 {
     let cond = OpCond::n((op_code >> 3) & 0x07).unwrap();
     if cond.test(computer.cpu.psw) {
         exec_3O5_call(op_code, computer, cycles);
+        17
     } else {
         computer.cpu.pc = computer.cpu.pc.wrapping_add(3);
+        11
     }
 }
 
 #[allow(non_snake_case)]
-fn exec_3E5_push(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+fn exec_3E5_push(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) -> u8 {
     let rp = OpRegWord::n((op_code >> 3) & 0x06).unwrap();
     let w = computer.reg_word(rp);
     computer.mem.set(computer.cpu.sp.wrapping_sub(1), (w >> 8) as u8);
@@ -1147,10 +1134,11 @@ fn exec_3E5_push(op_code: u8, computer: &mut Computer, cycles: Option<&mut Machi
         cycles.push(w as u8);
         cycles.push((w >> 8) as u8);
     }
+    11
 }
 
 #[allow(non_snake_case)]
-fn exec_3O5_call(_op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+fn exec_3O5_call(_op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) -> u8 {
     let addr = computer.load_word();
     let ret = computer.cpu.pc.wrapping_add(3);
     computer.mem.set(computer.cpu.sp.wrapping_sub(2), ret as u8);
@@ -1163,10 +1151,11 @@ fn exec_3O5_call(_op_code: u8, computer: &mut Computer, cycles: Option<&mut Mach
         cycles.push(ret as u8);
         cycles.push((ret >> 8) as u8);
     }
+    17
 }
 
 #[allow(non_snake_case)]
-fn exec_306_adi(_op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+fn exec_306_adi(_op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) -> u8 {
     let d = computer.load_byte();
     let a = computer.cpu.a;
     computer.cpu.a = execute_add(computer, a, d, false);
@@ -1174,10 +1163,11 @@ fn exec_306_adi(_op_code: u8, computer: &mut Computer, cycles: Option<&mut Machi
     if let Some(cycles) = cycles {
         cycles.push(d);
     }
+    7
 }
 
 #[allow(non_snake_case)]
-fn exec_316_aci(_op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+fn exec_316_aci(_op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) -> u8 {
     let d = computer.load_byte();
     let a = computer.cpu.a;
     let c = computer.cpu.psw.carry();
@@ -1186,10 +1176,11 @@ fn exec_316_aci(_op_code: u8, computer: &mut Computer, cycles: Option<&mut Machi
     if let Some(cycles) = cycles {
         cycles.push(d);
     }
+    7
 }
 
 #[allow(non_snake_case)]
-fn exec_326_sui(_op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+fn exec_326_sui(_op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) -> u8 {
     let d = computer.load_byte();
     let a = computer.cpu.a;
     let a = execute_sub(computer, a, d, false);
@@ -1198,10 +1189,11 @@ fn exec_326_sui(_op_code: u8, computer: &mut Computer, cycles: Option<&mut Machi
     if let Some(cycles) = cycles {
         cycles.push(d);
     }
+    7
 }
 
 #[allow(non_snake_case)]
-fn exec_336_sbi(_op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+fn exec_336_sbi(_op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) -> u8 {
     let d = computer.load_byte();
     let a = computer.cpu.a;
     let c = computer.cpu.psw.carry();
@@ -1211,10 +1203,11 @@ fn exec_336_sbi(_op_code: u8, computer: &mut Computer, cycles: Option<&mut Machi
     if let Some(cycles) = cycles {
         cycles.push(d);
     }
+    7
 }
 
 #[allow(non_snake_case)]
-fn exec_346_ani(_op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+fn exec_346_ani(_op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) -> u8 {
     let d = computer.load_byte();
     computer.cpu.psw.set_aux_carry(false);
     computer.cpu.psw.set_carry(false);
@@ -1224,10 +1217,11 @@ fn exec_346_ani(_op_code: u8, computer: &mut Computer, cycles: Option<&mut Machi
     if let Some(cycles) = cycles {
         cycles.push(d);
     }
+    7
 }
 
 #[allow(non_snake_case)]
-fn exec_356_xri(_op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+fn exec_356_xri(_op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) -> u8 {
     let d = computer.load_byte();
     computer.cpu.psw.set_aux_carry(false);
     computer.cpu.psw.set_carry(false);
@@ -1237,10 +1231,11 @@ fn exec_356_xri(_op_code: u8, computer: &mut Computer, cycles: Option<&mut Machi
     if let Some(cycles) = cycles {
         cycles.push(d);
     }
+    7
 }
 
 #[allow(non_snake_case)]
-fn exec_366_ori(_op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+fn exec_366_ori(_op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) -> u8 {
     let d = computer.load_byte();
     computer.cpu.psw.set_aux_carry(false);
     computer.cpu.psw.set_carry(false);
@@ -1250,10 +1245,11 @@ fn exec_366_ori(_op_code: u8, computer: &mut Computer, cycles: Option<&mut Machi
     if let Some(cycles) = cycles {
         cycles.push(d);
     }
+    7
 }
 
 #[allow(non_snake_case)]
-fn exec_376_cpi(_op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+fn exec_376_cpi(_op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) -> u8 {
     let d = computer.load_byte();
     let a = computer.cpu.a;
     execute_sub(computer, a, d, false);
@@ -1261,15 +1257,17 @@ fn exec_376_cpi(_op_code: u8, computer: &mut Computer, cycles: Option<&mut Machi
     if let Some(cycles) = cycles {
         cycles.push(d);
     }
+    7
 }
 
 #[allow(non_snake_case)]
-fn exec_3X7_rst(op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) {
+fn exec_3X7_rst(op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) -> u8 {
     let a = OpTriplet::n((op_code >> 3) & 0x07).unwrap();
     computer.cpu.pc = ((a as u8) << 3) as u16;
+    11
 }
 
-const EXEC: [fn(u8, &mut Computer, Option<&mut MachineCycles>); 256] = [
+const EXEC: [fn(u8, &mut Computer, Option<&mut MachineCycles>) -> u8; 256] = [
     exec_0X0_nop, exec_0E1_lxi,  exec_0F2_stax, exec_0E3_inx,  exec_0X4_inr, exec_0X5_dcr,  exec_0X6_mvi, exec_007_rlc,
     exec_0X0_nop, exec_0O1_dad,  exec_0P2_ldax, exec_0O3_dcx,  exec_0X4_inr, exec_0X5_dcr,  exec_0X6_mvi, exec_017_rrc,
     exec_0X0_nop, exec_0E1_lxi,  exec_0F2_stax, exec_0E3_inx,  exec_0X4_inr, exec_0X5_dcr,  exec_0X6_mvi, exec_027_ral,
