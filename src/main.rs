@@ -411,7 +411,7 @@ fn render(
 }
 
 const FPS: u16 = 40;
-const MAX_CPU_FREQUENCY_100_K_HZ: u16 = 10;
+const MAX_CPU_FREQUENCY_100_K_HZ: u16 = 20;
 const MAX_TICKS_BALANCE: i32 = 5000 * MAX_CPU_FREQUENCY_100_K_HZ as u32 as i32;
 const KEY_PRESS_MS: u8 = 100;
 

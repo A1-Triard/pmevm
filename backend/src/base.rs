@@ -132,42 +132,66 @@ pub enum OpTriplet {
 }
 
 #[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Hash, Copy, Clone)]
+#[repr(u8)]
 pub enum Op {
-    Inr(OpReg),
-    Dcr(OpReg),
-    Mov(OpReg, OpReg),
-    Add(OpReg),
-    Adc(OpReg),
-    Sub(OpReg),
-    Sbb(OpReg),
-    Ana(OpReg),
-    Xra(OpReg),
-    Ora(OpReg),
-    Cmp(OpReg),
-    Inx(OpRegPair),
-    Dcx(OpRegPair),
-    Dad(OpRegPair),
-    Pop(OpRegWord),
-    Push(OpRegWord),
-    Stax(OpExtReg),
-    Ldax(OpExtReg),
-    Rcc(OpCond),
-    Ret, Ret_,
-    Rlc, Rrc, Ral, Rar,
-    Xchg, Xthl, Sphl, Pchl,
-    Nop(OpTriplet),
-    Di, Ei,
-    Daa, Cma, Stc, Cmc,
-    Rst(OpTriplet),
-    Adi, Aci, Sui, Sbi, Ani, Xri, Ori, Cpi,
-    In, Out,
-    Mvi(OpReg),
-    Jcc(OpCond),
-    Jmp, Jmp_,
-    Ccc(OpCond),
-    Call(OpRegWord),
-    Lxi(OpRegPair),
-    Sta, Lda, Shld, Lhld
+    Inr(OpReg) = 0o004,
+    Dcr(OpReg) = 0o005,
+    Mov(OpReg, OpReg) = 0o100,
+    Add(OpReg) = 0o200,
+    Adc(OpReg) = 0o210,
+    Sub(OpReg) = 0o220,
+    Sbb(OpReg) = 0o230,
+    Ana(OpReg) = 0o240,
+    Xra(OpReg) = 0o250,
+    Ora(OpReg) = 0o260,
+    Cmp(OpReg) = 0o270,
+    Inx(OpRegPair) = 0o003,
+    Dcx(OpRegPair) = 0o013,
+    Dad(OpRegPair) = 0o011,
+    Pop(OpRegWord) = 0o301,
+    Push(OpRegWord) = 0o305,
+    Stax(OpExtReg) = 0o002,
+    Ldax(OpExtReg) = 0o012,
+    Rcc(OpCond) = 0o300,
+    Ret = 0o311,
+    Ret_ = 0o331,
+    Rlc = 0o007,
+    Rrc = 0o017,
+    Ral = 0o027,
+    Rar = 0o037,
+    Xchg = 0o353,
+    Xthl = 0o343,
+    Sphl = 0o371,
+    Pchl = 0o351,
+    Nop(OpTriplet) = 0o000,
+    Di = 0o363,
+    Ei = 0o373,
+    Daa = 0o047,
+    Cma = 0o057,
+    Stc = 0o067,
+    Cmc = 0o077,
+    Rst(OpTriplet) = 0o307,
+    Adi = 0o306,
+    Aci = 0o316,
+    Sui = 0o326,
+    Sbi = 0o336,
+    Ani = 0o346,
+    Xri = 0o356,
+    Ori = 0o366,
+    Cpi = 0o376,
+    In = 0o333,
+    Out = 0o323,
+    Mvi(OpReg) = 0o006,
+    Jcc(OpCond) = 0o302,
+    Jmp = 0o303,
+    Jmp_ = 0o313,
+    Ccc(OpCond) = 0o304,
+    Call(OpRegWord) = 0o315,
+    Lxi(OpRegPair) = 0o001,
+    Sta = 0o062,
+    Lda = 0o072,
+    Shld = 0o042,
+    Lhld = 0o052,
 }
 
 impl Op {
@@ -567,548 +591,718 @@ impl Computer {
             cycles.push(0b10001010);
             return cycles;
         }
-        let op: Op = self.mem.get(self.cpu.pc).into();
-        cycles.push(op.into());
-        op.execute(self, Some(&mut cycles));
+        let op = self.mem.get(self.cpu.pc);
+        cycles.push(op);
+        EXEC[usize::from(op)](op, self, Some(&mut cycles));
         cycles
     }
 
     pub fn step_ticks(&mut self) -> Option<u8> {
         if self.cpu.halted { return None; }
-        let op: Op = self.mem.get(self.cpu.pc).into();
-        let ticks = op.ticks(self.cpu.psw);
-        op.execute(self, None);
+        let op = self.mem.get(self.cpu.pc);
+        let ticks = Op::from(op).ticks(self.cpu.psw);
+        EXEC[usize::from(op)](op, self, None);
         Some(ticks)
     }
 }
 
 pub type MachineCycles = ArrayVec<u8, 5>;
 
-impl Op {
-    fn execute(self, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
-        fn execute_ret(computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
-            let l = computer.mem.get(computer.cpu.sp);
-            let h = computer.mem.get(computer.cpu.sp.wrapping_add(1));
-            computer.cpu.pc = ((h as u16) << 8) | (l as u16);
-            computer.cpu.sp = computer.cpu.sp.wrapping_add(2);
-            if let Some(cycles) = cycles {
-                cycles.push(l);
-                cycles.push(h);
-            }
-        }
+fn execute_add(computer: &mut Computer, a: u8, d: u8, c: bool) -> u8 {
+    let aux = ((a & 0x0F) + (d & 0x0F) + c as u8) & 0xF0 != 0;
+    let carry = ((a >> 4) + (d >> 4) + aux as u8) & 0xF0 != 0;
+    computer.cpu.psw.set_aux_carry(aux);
+    computer.cpu.psw.set_carry(carry);
+    let a = a.wrapping_add(d).wrapping_add(c as u8);
+    computer.cpu.psw.check(a);
+    a
+}
 
-        fn execute_jmp(computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
-            let addr = computer.load_word();
-            computer.cpu.pc = addr;
-            if let Some(cycles) = cycles {
-                cycles.push(addr as u8);
-                cycles.push((addr >> 8) as u8);
-            }
-        }
+fn execute_sub(computer: &mut Computer, a: u8, d: u8, c: bool) -> u8 {
+    let aux = (a & 0x0F) < (d & 0x0F) + c as u8;
+    let carry = (a >> 4) < (d >> 4) + aux as u8;
+    computer.cpu.psw.set_aux_carry(aux);
+    computer.cpu.psw.set_carry(carry);
+    let a = a.wrapping_sub(d).wrapping_sub(c as u8);
+    computer.cpu.psw.check(a);
+    a
+}
 
-        fn execute_call(computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
-            let addr = computer.load_word();
-            let ret = computer.cpu.pc.wrapping_add(3);
-            computer.mem.set(computer.cpu.sp.wrapping_sub(2), ret as u8);
-            computer.mem.set(computer.cpu.sp.wrapping_sub(1), (ret >> 8) as u8);
-            computer.cpu.sp = computer.cpu.sp.wrapping_sub(2);
-            computer.cpu.pc = addr;
-            if let Some(cycles) = cycles {
-                cycles.push(addr as u8);
-                cycles.push((addr >> 8) as u8);
-                cycles.push(ret as u8);
-                cycles.push((ret >> 8) as u8);
-            }
-        }
+#[allow(non_snake_case)]
+fn exec_0X0_nop(_op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) {
+    computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+}
 
-        fn execute_add(computer: &mut Computer, a: u8, d: u8, c: bool) -> u8 {
-            let aux = ((a & 0x0F) + (d & 0x0F) + c as u8) & 0xF0 != 0;
-            let carry = ((a >> 4) + (d >> 4) + aux as u8) & 0xF0 != 0;
-            computer.cpu.psw.set_aux_carry(aux);
-            computer.cpu.psw.set_carry(carry);
-            let a = a.wrapping_add(d).wrapping_add(c as u8);
-            computer.cpu.psw.check(a);
-            a
-        }
+#[allow(non_snake_case)]
+fn exec_0E1_lxi(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+    let rp = OpRegPair::n((op_code >> 3) & 0x06).unwrap();
+    let d = computer.load_word();
+    computer.set_reg_pair(rp, d);
+    computer.cpu.pc = computer.cpu.pc.wrapping_add(3);
+    if let Some(cycles) = cycles {
+        cycles.push(d as u8);
+        cycles.push((d >> 8) as u8);
+    }
+}
 
-        fn execute_sub(computer: &mut Computer, a: u8, d: u8, c: bool) -> u8 {
-            let aux = (a & 0x0F) < (d & 0x0F) + c as u8;
-            let carry = (a >> 4) < (d >> 4) + aux as u8;
-            computer.cpu.psw.set_aux_carry(aux);
-            computer.cpu.psw.set_carry(carry);
-            let a = a.wrapping_sub(d).wrapping_sub(c as u8);
-            computer.cpu.psw.check(a);
-            a
-        }
+#[allow(non_snake_case)]
+fn exec_0O1_dad(op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) {
+    let rp = OpRegPair::n((op_code >> 3) & 0x06).unwrap();
+    let d = computer.reg_pair(rp);
+    let hl = ((computer.cpu.h as u16) << 8) | (computer.cpu.l as u16);
+    let sum = hl.wrapping_add(d);
+    computer.cpu.psw.set_carry(sum < d || sum < hl);
+    computer.cpu.h = (sum >> 8) as u8;
+    computer.cpu.l = sum as u8;
+    computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+}
 
-        match self {
-            Op::Shld => {
-                let addr = computer.load_word();
-                computer.mem.set(addr, computer.cpu.l);
-                computer.mem.set(addr.wrapping_add(1), computer.cpu.h);
-                computer.cpu.pc = computer.cpu.pc.wrapping_add(3);
-                if let Some(cycles) = cycles {
-                    cycles.push(addr as u8);
-                    cycles.push((addr >> 8) as u8);
-                    cycles.push(computer.cpu.l);
-                    cycles.push(computer.cpu.h);
-                }
-            },
-            Op::Lhld => {
-                let addr = computer.load_word();
-                computer.cpu.l = computer.mem.get(addr);
-                computer.cpu.h = computer.mem.get(addr.wrapping_add(1));
-                computer.cpu.pc = computer.cpu.pc.wrapping_add(3);
-                if let Some(cycles) = cycles {
-                    cycles.push(addr as u8);
-                    cycles.push((addr >> 8) as u8);
-                    cycles.push(computer.cpu.l);
-                    cycles.push(computer.cpu.h);
-                }
-            },
-            Op::Sta => {
-                let addr = computer.load_word();
-                computer.mem.set(addr, computer.cpu.a);
-                computer.cpu.pc = computer.cpu.pc.wrapping_add(3);
-                if let Some(cycles) = cycles {
-                    cycles.push(addr as u8);
-                    cycles.push((addr >> 8) as u8);
-                    cycles.push(computer.cpu.a);
-                }
-            },
-            Op::Lda => {
-                let addr = computer.load_word();
-                computer.cpu.a = computer.mem.get(addr);
-                computer.cpu.pc = computer.cpu.pc.wrapping_add(3);
-                if let Some(cycles) = cycles {
-                    cycles.push(addr as u8);
-                    cycles.push((addr >> 8) as u8);
-                    cycles.push(computer.cpu.a);
-                }
-            },
-            Op::Rlc => {
-                let carry = computer.cpu.a >> 7;
-                computer.cpu.a = (computer.cpu.a << 1) | carry;
-                computer.cpu.psw.set_carry(carry != 0);
-                computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
-            },
-            Op::Rrc => {
-                let carry = computer.cpu.a << 7;
-                computer.cpu.a = (computer.cpu.a >> 1) | carry;
-                computer.cpu.psw.set_carry(carry != 0);
-                computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
-            },
-            Op::Ral => {
-                let carry = computer.cpu.a >> 7;
-                computer.cpu.a = (computer.cpu.a << 1) | computer.cpu.psw.carry() as u8;
-                computer.cpu.psw.set_carry(carry != 0);
-                computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
-            },
-            Op::Rar => {
-                let carry = computer.cpu.a << 7;
-                computer.cpu.a = (computer.cpu.a >> 1) | ((computer.cpu.psw.carry() as u8) << 7);
-                computer.cpu.psw.set_carry(carry != 0);
-                computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
-            },
-            Op::Daa => {
-                let aux = computer.cpu.psw.aux_carry() as u8;
-                let carry = (computer.cpu.psw.carry() as u8) << 4;
-                let mut l = (computer.cpu.a & 0x0F) | (aux << 4);
-                let mut h = ((computer.cpu.a >> 4) | carry).wrapping_sub(aux);
-                let aux = l / 10 != 0;
-                l %= 10;
-                computer.cpu.psw.set_aux_carry(aux);
-                h += aux as u8;
-                let carry = h / 10 != 0;
-                h %= 10;
-                computer.cpu.psw.set_carry(carry);
-                computer.cpu.a = (h << 4) | l;
-                computer.cpu.psw.check(computer.cpu.a);
-                computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
-            },
-            Op::Cma => {
-                computer.cpu.a = !computer.cpu.a;
-                computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
-            },
-            Op::Stc => {
-                computer.cpu.psw.set_carry(true);
-                computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
-            },
-            Op::Cmc => {
-                computer.cpu.psw.set_carry(!computer.cpu.psw.carry());
-                computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
-            },
-            Op::Ret | Op::Ret_ => execute_ret(computer, cycles),
-            Op::Pchl => {
-                computer.cpu.pc = ((computer.cpu.h as u16) << 8) | (computer.cpu.l as u16);
-            },
-            Op::Sphl => {
-                computer.cpu.sp = ((computer.cpu.h as u16) << 8) | (computer.cpu.l as u16);
-                computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
-            },
-            Op::Jmp | Op::Jmp_ => execute_jmp(computer, cycles),
-            Op::Out => {
-                let port = computer.load_byte();
-                computer.cpu.pc = computer.cpu.pc.wrapping_add(2);
-                computer.ports[port as usize].out = computer.cpu.a;
-                if let Some(cycles) = cycles {
-                    cycles.push(port);
-                    cycles.push(computer.cpu.a);
-                }
-            },
-            Op::In => {
-                let port = computer.load_byte();
-                computer.cpu.a = computer.ports[port as usize].in_;
-                computer.cpu.pc = computer.cpu.pc.wrapping_add(2);
-                if let Some(cycles) = cycles {
-                    cycles.push(port);
-                    cycles.push(computer.cpu.a);
-                }
-            },
-            Op::Xthl => {
-                let l = computer.mem.get(computer.cpu.sp);
-                let h = computer.mem.get(computer.cpu.sp.wrapping_add(1));
-                let l = replace(&mut computer.cpu.l, l);
-                let h = replace(&mut computer.cpu.h, h);
-                computer.mem.set(computer.cpu.sp, l);
-                computer.mem.set(computer.cpu.sp.wrapping_add(1), h);
-                computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
-                if let Some(cycles) = cycles {
-                    cycles.push(computer.cpu.l);
-                    cycles.push(l);
-                    cycles.push(computer.cpu.h);
-                    cycles.push(h);
-                }
-            },
-            Op::Xchg => {
-                swap(&mut computer.cpu.h, &mut computer.cpu.d);
-                swap(&mut computer.cpu.l, &mut computer.cpu.e);
-                computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
-            },
-            Op::Di => {
-                computer.cpu.interrupts_enabled = false;
-                computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
-            },
-            Op::Ei => {
-                computer.cpu.interrupts_enabled = true;
-                computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
-            },
-            Op::Adi => {
-                let d = computer.load_byte();
-                let a = computer.cpu.a;
-                computer.cpu.a = execute_add(computer, a, d, false);
-                computer.cpu.pc = computer.cpu.pc.wrapping_add(2);
-                if let Some(cycles) = cycles {
-                    cycles.push(d);
-                }
-            },
-            Op::Aci => {
-                let d = computer.load_byte();
-                let a = computer.cpu.a;
-                let c = computer.cpu.psw.carry();
-                computer.cpu.a = execute_add(computer, a, d, c);
-                computer.cpu.pc = computer.cpu.pc.wrapping_add(2);
-                if let Some(cycles) = cycles {
-                    cycles.push(d);
-                }
-            },
-            Op::Sui => {
-                let d = computer.load_byte();
-                let a = computer.cpu.a;
-                let a = execute_sub(computer, a, d, false);
-                computer.cpu.a = a;
-                computer.cpu.pc = computer.cpu.pc.wrapping_add(2);
-                if let Some(cycles) = cycles {
-                    cycles.push(d);
-                }
-            },
-            Op::Sbi => {
-                let d = computer.load_byte();
-                let a = computer.cpu.a;
-                let c = computer.cpu.psw.carry();
-                let a = execute_sub(computer, a, d, c);
-                computer.cpu.a = a;
-                computer.cpu.pc = computer.cpu.pc.wrapping_add(2);
-                if let Some(cycles) = cycles {
-                    cycles.push(d);
-                }
-            },
-            Op::Ani => {
-                let d = computer.load_byte();
-                computer.cpu.psw.set_aux_carry(false);
-                computer.cpu.psw.set_carry(false);
-                computer.cpu.a &= d;
-                computer.cpu.psw.check(computer.cpu.a);
-                computer.cpu.pc = computer.cpu.pc.wrapping_add(2);
-                if let Some(cycles) = cycles {
-                    cycles.push(d);
-                }
-            },
-            Op::Xri => {
-                let d = computer.load_byte();
-                computer.cpu.psw.set_aux_carry(false);
-                computer.cpu.psw.set_carry(false);
-                computer.cpu.a ^= d;
-                computer.cpu.psw.check(computer.cpu.a);
-                computer.cpu.pc = computer.cpu.pc.wrapping_add(2);
-                if let Some(cycles) = cycles {
-                    cycles.push(d);
-                }
-            },
-            Op::Ori => {
-                let d = computer.load_byte();
-                computer.cpu.psw.set_aux_carry(false);
-                computer.cpu.psw.set_carry(false);
-                computer.cpu.a |= d;
-                computer.cpu.psw.check(computer.cpu.a);
-                computer.cpu.pc = computer.cpu.pc.wrapping_add(2);
-                if let Some(cycles) = cycles {
-                    cycles.push(d);
-                }
-            },
-            Op::Cpi => {
-                let d = computer.load_byte();
-                let a = computer.cpu.a;
-                execute_sub(computer, a, d, false);
-                computer.cpu.pc = computer.cpu.pc.wrapping_add(2);
-                if let Some(cycles) = cycles {
-                    cycles.push(d);
-                }
-            },
-            Op::Mov(OpReg::M, OpReg::M) => {
-                computer.cpu.halted = true;
-            },
-            Op::Mov(rd, rs) => {
-                let d = computer.reg(rs);
-                computer.set_reg(rd, d);
-                computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
-                if let Some(cycles) = cycles {
-                    if rs == OpReg::M || rd == OpReg::M {
-                        cycles.push(d);
-                    }
-                }
-            },
-            Op::Add(r) => {
-                let d = computer.reg(r);
-                let a = computer.cpu.a;
-                computer.cpu.a = execute_add(computer, a, d, false);
-                computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
-                if let Some(cycles) = cycles {
-                    if r == OpReg::M {
-                        cycles.push(d);
-                    }
-                }
-            },
-            Op::Adc(r) => {
-                let d = computer.reg(r);
-                let a = computer.cpu.a;
-                let c = computer.cpu.psw.carry();
-                computer.cpu.a = execute_add(computer, a, d, c);
-                computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
-                if let Some(cycles) = cycles {
-                    if r == OpReg::M {
-                        cycles.push(d);
-                    }
-                }
-            },
-            Op::Sub(r) => {
-                let d = computer.reg(r);
-                let a = computer.cpu.a;
-                let a = execute_sub(computer, a, d, false);
-                computer.cpu.a = a;
-                computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
-                if let Some(cycles) = cycles {
-                    if r == OpReg::M {
-                        cycles.push(d);
-                    }
-                }
-            },
-            Op::Sbb(r) => {
-                let d = computer.reg(r);
-                let a = computer.cpu.a;
-                let c = computer.cpu.psw.carry();
-                let a = execute_sub(computer, a, d, c);
-                computer.cpu.a = a;
-                computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
-                if let Some(cycles) = cycles {
-                    if r == OpReg::M {
-                        cycles.push(d);
-                    }
-                }
-            },
-            Op::Ana(r) => {
-                let d = computer.reg(r);
-                computer.cpu.psw.set_aux_carry(false);
-                computer.cpu.psw.set_carry(false);
-                computer.cpu.a &= d;
-                computer.cpu.psw.check(computer.cpu.a);
-                computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
-                if let Some(cycles) = cycles {
-                    if r == OpReg::M {
-                        cycles.push(d);
-                    }
-                }
-            },
-            Op::Xra(r) => {
-                let d = computer.reg(r);
-                computer.cpu.psw.set_aux_carry(false);
-                computer.cpu.psw.set_carry(false);
-                computer.cpu.a ^= d;
-                computer.cpu.psw.check(computer.cpu.a);
-                computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
-                if let Some(cycles) = cycles {
-                    if r == OpReg::M {
-                        cycles.push(d);
-                    }
-                }
-            },
-            Op::Ora(r) => {
-                let d = computer.reg(r);
-                computer.cpu.psw.set_aux_carry(false);
-                computer.cpu.psw.set_carry(false);
-                computer.cpu.a |= d;
-                computer.cpu.psw.check(computer.cpu.a);
-                computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
-                if let Some(cycles) = cycles {
-                    if r == OpReg::M {
-                        cycles.push(d);
-                    }
-                }
-            },
-            Op::Cmp(r) => {
-                let d = computer.reg(r);
-                let a = computer.cpu.a;
-                execute_sub(computer, a, d, false);
-                computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
-                if let Some(cycles) = cycles {
-                    if r == OpReg::M {
-                        cycles.push(d);
-                    }
-                }
-            },
-            Op::Nop(_) => {
-                computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
-            },
-            Op::Lxi(rp) => {
-                let d = computer.load_word();
-                computer.set_reg_pair(rp, d);
-                computer.cpu.pc = computer.cpu.pc.wrapping_add(3);
-                if let Some(cycles) = cycles {
-                    cycles.push(d as u8);
-                    cycles.push((d >> 8) as u8);
-                }
-            },
-            Op::Dad(rp) => {
-                let d = computer.reg_pair(rp);
-                let hl = ((computer.cpu.h as u16) << 8) | (computer.cpu.l as u16);
-                let sum = hl.wrapping_add(d);
-                computer.cpu.psw.set_carry(sum < d || sum < hl);
-                computer.cpu.h = (sum >> 8) as u8;
-                computer.cpu.l = sum as u8;
-                computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
-            },
-            Op::Stax(rp) => {
-                let addr = computer.ext_reg(rp);
-                computer.mem.set(addr, computer.cpu.a);
-                computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
-                if let Some(cycles) = cycles {
-                    cycles.push(computer.cpu.a);
-                }
-            },
-            Op::Ldax(rp) => {
-                let addr = computer.ext_reg(rp);
-                computer.cpu.a = computer.mem.get(addr);
-                computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
-                if let Some(cycles) = cycles {
-                    cycles.push(computer.cpu.a);
-                }
-            },
-            Op::Inx(rp) => {
-                let d = computer.reg_pair(rp);
-                computer.set_reg_pair(rp, d.wrapping_add(1));
-                computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
-            },
-            Op::Dcx(rp) => {
-                let d = computer.reg_pair(rp);
-                computer.set_reg_pair(rp, d.wrapping_sub(1));
-                computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
-            },
-            Op::Inr(r) => {
-                let d = computer.reg(r);
-                let a = execute_add(computer, d, 1, false);
-                computer.set_reg(r, a);
-                computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
-                if let Some(cycles) = cycles {
-                    if r == OpReg::M {
-                        cycles.push(d);
-                        cycles.push(d);
-                    }
-                }
-            },
-            Op::Dcr(r) => {
-                let d = computer.reg(r);
-                let a = execute_sub(computer, d, 1, false);
-                computer.set_reg(r, a);
-                computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
-                if let Some(cycles) = cycles {
-                    if r == OpReg::M {
-                        cycles.push(d);
-                        cycles.push(d);
-                    }
-                }
-            },
-            Op::Mvi(r) => {
-                let d = computer.load_byte();
-                computer.set_reg(r, d);
-                computer.cpu.pc = computer.cpu.pc.wrapping_add(2);
-                if let Some(cycles) = cycles {
-                    cycles.push(d);
-                    if r == OpReg::M {
-                        cycles.push(d);
-                    }
-                }
-            },
-            Op::Rcc(cond) => if cond.test(computer.cpu.psw) {
-                execute_ret(computer, cycles);
-            } else {
-                computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
-            },
-            Op::Pop(rp) => {
-                let l = computer.mem.get(computer.cpu.sp);
-                let h = computer.mem.get(computer.cpu.sp.wrapping_add(1));
-                computer.set_reg_word(rp, ((h as u16) << 8) | (l as u16));
-                computer.cpu.sp = computer.cpu.sp.wrapping_add(2);
-                computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
-                if let Some(cycles) = cycles {
-                    cycles.push(l);
-                    cycles.push(h);
-                }
-            },
-            Op::Jcc(cond) => if cond.test(computer.cpu.psw) {
-                execute_jmp(computer, cycles);
-            } else {
-                computer.cpu.pc = computer.cpu.pc.wrapping_add(3);
-            },
-            Op::Ccc(cond) => if cond.test(computer.cpu.psw) {
-                execute_call(computer, cycles);
-            } else {
-                computer.cpu.pc = computer.cpu.pc.wrapping_add(3);
-            },
-            Op::Push(rp) => {
-                let w = computer.reg_word(rp);
-                computer.mem.set(computer.cpu.sp.wrapping_sub(1), (w >> 8) as u8);
-                computer.mem.set(computer.cpu.sp.wrapping_sub(2), w as u8);
-                computer.cpu.sp = computer.cpu.sp.wrapping_sub(2);
-                computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
-                if let Some(cycles) = cycles {
-                    cycles.push(w as u8);
-                    cycles.push((w >> 8) as u8);
-                }
-            },
-            Op::Call(_) => execute_call(computer, cycles),
-            Op::Rst(a) => {
-                computer.cpu.pc = ((a as u8) << 3) as u16;
-            },
+#[allow(non_snake_case)]
+fn exec_0F2_stax(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+    let rp = OpExtReg::n((op_code >> 3) & 0x06).unwrap();
+    let addr = computer.ext_reg(rp);
+    computer.mem.set(addr, computer.cpu.a);
+    computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+    if let Some(cycles) = cycles {
+        cycles.push(computer.cpu.a);
+    }
+}
+
+#[allow(non_snake_case)]
+fn exec_0P2_ldax(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+    let rp = OpExtReg::n((op_code >> 3) & 0x06).unwrap();
+    let addr = computer.ext_reg(rp);
+    computer.cpu.a = computer.mem.get(addr);
+    computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+    if let Some(cycles) = cycles {
+        cycles.push(computer.cpu.a);
+    }
+}
+
+#[allow(non_snake_case)]
+fn exec_042_shld(_op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+    let addr = computer.load_word();
+    computer.mem.set(addr, computer.cpu.l);
+    computer.mem.set(addr.wrapping_add(1), computer.cpu.h);
+    computer.cpu.pc = computer.cpu.pc.wrapping_add(3);
+    if let Some(cycles) = cycles {
+        cycles.push(addr as u8);
+        cycles.push((addr >> 8) as u8);
+        cycles.push(computer.cpu.l);
+        cycles.push(computer.cpu.h);
+    }
+}
+
+#[allow(non_snake_case)]
+fn exec_052_lhld(_op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+    let addr = computer.load_word();
+    computer.cpu.l = computer.mem.get(addr);
+    computer.cpu.h = computer.mem.get(addr.wrapping_add(1));
+    computer.cpu.pc = computer.cpu.pc.wrapping_add(3);
+    if let Some(cycles) = cycles {
+        cycles.push(addr as u8);
+        cycles.push((addr >> 8) as u8);
+        cycles.push(computer.cpu.l);
+        cycles.push(computer.cpu.h);
+    }
+}
+
+#[allow(non_snake_case)]
+fn exec_062_sta(_op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+    let addr = computer.load_word();
+    computer.mem.set(addr, computer.cpu.a);
+    computer.cpu.pc = computer.cpu.pc.wrapping_add(3);
+    if let Some(cycles) = cycles {
+        cycles.push(addr as u8);
+        cycles.push((addr >> 8) as u8);
+        cycles.push(computer.cpu.a);
+    }
+}
+
+#[allow(non_snake_case)]
+fn exec_072_lda(_op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+    let addr = computer.load_word();
+    computer.cpu.a = computer.mem.get(addr);
+    computer.cpu.pc = computer.cpu.pc.wrapping_add(3);
+    if let Some(cycles) = cycles {
+        cycles.push(addr as u8);
+        cycles.push((addr >> 8) as u8);
+        cycles.push(computer.cpu.a);
+    }
+}
+
+#[allow(non_snake_case)]
+fn exec_0E3_inx(op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) {
+    let rp = OpRegPair::n((op_code >> 3) & 0x06).unwrap();
+    let d = computer.reg_pair(rp);
+    computer.set_reg_pair(rp, d.wrapping_add(1));
+    computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+}
+
+#[allow(non_snake_case)]
+fn exec_0O3_dcx(op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) {
+    let rp = OpRegPair::n((op_code >> 3) & 0x06).unwrap();
+    let d = computer.reg_pair(rp);
+    computer.set_reg_pair(rp, d.wrapping_sub(1));
+    computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+}
+
+#[allow(non_snake_case)]
+fn exec_0X4_inr(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+    let r = OpReg::n((op_code >> 3) & 0x07).unwrap();
+    let d = computer.reg(r);
+    let a = execute_add(computer, d, 1, false);
+    computer.set_reg(r, a);
+    computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+    if let Some(cycles) = cycles {
+        if r == OpReg::M {
+            cycles.push(d);
+            cycles.push(d);
         }
     }
 }
+
+#[allow(non_snake_case)]
+fn exec_0X5_dcr(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+    let r = OpReg::n((op_code >> 3) & 0x07).unwrap();
+    let d = computer.reg(r);
+    let a = execute_sub(computer, d, 1, false);
+    computer.set_reg(r, a);
+    computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+    if let Some(cycles) = cycles {
+        if r == OpReg::M {
+            cycles.push(d);
+            cycles.push(d);
+        }
+    }
+}
+
+#[allow(non_snake_case)]
+fn exec_0X6_mvi(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+    let r = OpReg::n((op_code >> 3) & 0x07).unwrap();
+    let d = computer.load_byte();
+    computer.set_reg(r, d);
+    computer.cpu.pc = computer.cpu.pc.wrapping_add(2);
+    if let Some(cycles) = cycles {
+        cycles.push(d);
+        if r == OpReg::M {
+            cycles.push(d);
+        }
+    }
+}
+
+#[allow(non_snake_case)]
+fn exec_007_rlc(_op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) {
+    let carry = computer.cpu.a >> 7;
+    computer.cpu.a = (computer.cpu.a << 1) | carry;
+    computer.cpu.psw.set_carry(carry != 0);
+    computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+}
+
+#[allow(non_snake_case)]
+fn exec_017_rrc(_op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) {
+    let carry = computer.cpu.a << 7;
+    computer.cpu.a = (computer.cpu.a >> 1) | carry;
+    computer.cpu.psw.set_carry(carry != 0);
+    computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+}
+
+#[allow(non_snake_case)]
+fn exec_027_ral(_op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) {
+    let carry = computer.cpu.a >> 7;
+    computer.cpu.a = (computer.cpu.a << 1) | computer.cpu.psw.carry() as u8;
+    computer.cpu.psw.set_carry(carry != 0);
+    computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+}
+
+#[allow(non_snake_case)]
+fn exec_037_rar(_op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) {
+    let carry = computer.cpu.a << 7;
+    computer.cpu.a = (computer.cpu.a >> 1) | ((computer.cpu.psw.carry() as u8) << 7);
+    computer.cpu.psw.set_carry(carry != 0);
+    computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+}
+
+#[allow(non_snake_case)]
+fn exec_047_daa(_op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) {
+    let aux = computer.cpu.psw.aux_carry() as u8;
+    let carry = (computer.cpu.psw.carry() as u8) << 4;
+    let mut l = (computer.cpu.a & 0x0F) | (aux << 4);
+    let mut h = ((computer.cpu.a >> 4) | carry).wrapping_sub(aux);
+    let aux = l / 10 != 0;
+    l %= 10;
+    computer.cpu.psw.set_aux_carry(aux);
+    h += aux as u8;
+    let carry = h / 10 != 0;
+    h %= 10;
+    computer.cpu.psw.set_carry(carry);
+    computer.cpu.a = (h << 4) | l;
+    computer.cpu.psw.check(computer.cpu.a);
+    computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+}
+
+#[allow(non_snake_case)]
+fn exec_057_cma(_op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) {
+    computer.cpu.a = !computer.cpu.a;
+    computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+}
+
+#[allow(non_snake_case)]
+fn exec_067_stc(_op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) {
+    computer.cpu.psw.set_carry(true);
+    computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+}
+
+#[allow(non_snake_case)]
+fn exec_077_cmc(_op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) {
+    computer.cpu.psw.set_carry(!computer.cpu.psw.carry());
+    computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+}
+
+#[allow(non_snake_case)]
+fn exec_166_hlt(_op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) {
+    computer.cpu.halted = true;
+}
+
+#[allow(non_snake_case)]
+fn exec_1XX_mov(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+    let rd = OpReg::n((op_code >> 3) & 0x07).unwrap();
+    let rs = OpReg::n(op_code & 0x07).unwrap();
+    let d = computer.reg(rs);
+    computer.set_reg(rd, d);
+    computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+    if let Some(cycles) = cycles {
+        if rs == OpReg::M || rd == OpReg::M {
+            cycles.push(d);
+        }
+    }
+}
+
+#[allow(non_snake_case)]
+fn exec_20X_add(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+    let r = OpReg::n(op_code & 0x07).unwrap();
+    let d = computer.reg(r);
+    let a = computer.cpu.a;
+    computer.cpu.a = execute_add(computer, a, d, false);
+    computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+    if let Some(cycles) = cycles {
+        if r == OpReg::M {
+            cycles.push(d);
+        }
+    }
+}
+
+#[allow(non_snake_case)]
+fn exec_21X_adc(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+    let r = OpReg::n(op_code & 0x07).unwrap();
+    let d = computer.reg(r);
+    let a = computer.cpu.a;
+    let c = computer.cpu.psw.carry();
+    computer.cpu.a = execute_add(computer, a, d, c);
+    computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+    if let Some(cycles) = cycles {
+        if r == OpReg::M {
+            cycles.push(d);
+        }
+    }
+}
+
+#[allow(non_snake_case)]
+fn exec_22X_sub(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+    let r = OpReg::n(op_code & 0x07).unwrap();
+    let d = computer.reg(r);
+    let a = computer.cpu.a;
+    let a = execute_sub(computer, a, d, false);
+    computer.cpu.a = a;
+    computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+    if let Some(cycles) = cycles {
+        if r == OpReg::M {
+            cycles.push(d);
+        }
+    }
+}
+
+#[allow(non_snake_case)]
+fn exec_23X_sbb(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+    let r = OpReg::n(op_code & 0x07).unwrap();
+    let d = computer.reg(r);
+    let a = computer.cpu.a;
+    let c = computer.cpu.psw.carry();
+    let a = execute_sub(computer, a, d, c);
+    computer.cpu.a = a;
+    computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+    if let Some(cycles) = cycles {
+        if r == OpReg::M {
+            cycles.push(d);
+        }
+    }
+}
+
+#[allow(non_snake_case)]
+fn exec_24X_ana(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+    let r = OpReg::n(op_code & 0x07).unwrap();
+    let d = computer.reg(r);
+    computer.cpu.psw.set_aux_carry(false);
+    computer.cpu.psw.set_carry(false);
+    computer.cpu.a &= d;
+    computer.cpu.psw.check(computer.cpu.a);
+    computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+    if let Some(cycles) = cycles {
+        if r == OpReg::M {
+            cycles.push(d);
+        }
+    }
+}
+
+#[allow(non_snake_case)]
+fn exec_25X_xra(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+    let r = OpReg::n(op_code & 0x07).unwrap();
+    let d = computer.reg(r);
+    computer.cpu.psw.set_aux_carry(false);
+    computer.cpu.psw.set_carry(false);
+    computer.cpu.a ^= d;
+    computer.cpu.psw.check(computer.cpu.a);
+    computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+    if let Some(cycles) = cycles {
+        if r == OpReg::M {
+            cycles.push(d);
+        }
+    }
+}
+
+#[allow(non_snake_case)]
+fn exec_26X_ora(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+    let r = OpReg::n(op_code & 0x07).unwrap();
+    let d = computer.reg(r);
+    computer.cpu.psw.set_aux_carry(false);
+    computer.cpu.psw.set_carry(false);
+    computer.cpu.a |= d;
+    computer.cpu.psw.check(computer.cpu.a);
+    computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+    if let Some(cycles) = cycles {
+        if r == OpReg::M {
+            cycles.push(d);
+        }
+    }
+}
+
+#[allow(non_snake_case)]
+fn exec_27X_cmp(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+    let r = OpReg::n(op_code & 0x07).unwrap();
+    let d = computer.reg(r);
+    let a = computer.cpu.a;
+    execute_sub(computer, a, d, false);
+    computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+    if let Some(cycles) = cycles {
+        if r == OpReg::M {
+            cycles.push(d);
+        }
+    }
+}
+
+#[allow(non_snake_case)]
+fn exec_3X0_rcc(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+    let cond = OpCond::n((op_code >> 3) & 0x07).unwrap();
+    if cond.test(computer.cpu.psw) {
+        exec_3P1_ret(op_code, computer, cycles);
+    } else {
+        computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+    }
+}
+
+#[allow(non_snake_case)]
+fn exec_3E1_pop(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+    let rp = OpRegWord::n((op_code >> 3) & 0x06).unwrap();
+    let l = computer.mem.get(computer.cpu.sp);
+    let h = computer.mem.get(computer.cpu.sp.wrapping_add(1));
+    computer.set_reg_word(rp, ((h as u16) << 8) | (l as u16));
+    computer.cpu.sp = computer.cpu.sp.wrapping_add(2);
+    computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+    if let Some(cycles) = cycles {
+        cycles.push(l);
+        cycles.push(h);
+    }
+}
+
+#[allow(non_snake_case)]
+fn exec_3P1_ret(_op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+    let l = computer.mem.get(computer.cpu.sp);
+    let h = computer.mem.get(computer.cpu.sp.wrapping_add(1));
+    computer.cpu.pc = ((h as u16) << 8) | (l as u16);
+    computer.cpu.sp = computer.cpu.sp.wrapping_add(2);
+    if let Some(cycles) = cycles {
+        cycles.push(l);
+        cycles.push(h);
+    }
+}
+
+#[allow(non_snake_case)]
+fn exec_351_pchl(_op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) {
+    computer.cpu.pc = ((computer.cpu.h as u16) << 8) | (computer.cpu.l as u16);
+}
+
+#[allow(non_snake_case)]
+fn exec_371_sphl(_op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) {
+    computer.cpu.sp = ((computer.cpu.h as u16) << 8) | (computer.cpu.l as u16);
+    computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+}
+
+#[allow(non_snake_case)]
+fn exec_3X2_jcc(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+    let cond = OpCond::n((op_code >> 3) & 0x07).unwrap();
+    if cond.test(computer.cpu.psw) {
+        exec_3Z3_jmp(op_code, computer, cycles);
+    } else {
+        computer.cpu.pc = computer.cpu.pc.wrapping_add(3);
+    }
+}
+
+#[allow(non_snake_case)]
+fn exec_3Z3_jmp(_op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+    let addr = computer.load_word();
+    computer.cpu.pc = addr;
+    if let Some(cycles) = cycles {
+        cycles.push(addr as u8);
+        cycles.push((addr >> 8) as u8);
+    }
+}
+
+#[allow(non_snake_case)]
+fn exec_323_out(_op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+    let port = computer.load_byte();
+    computer.cpu.pc = computer.cpu.pc.wrapping_add(2);
+    computer.ports[port as usize].out = computer.cpu.a;
+    if let Some(cycles) = cycles {
+        cycles.push(port);
+        cycles.push(computer.cpu.a);
+    }
+}
+
+#[allow(non_snake_case)]
+fn exec_333_in(_op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+    let port = computer.load_byte();
+    computer.cpu.a = computer.ports[port as usize].in_;
+    computer.cpu.pc = computer.cpu.pc.wrapping_add(2);
+    if let Some(cycles) = cycles {
+        cycles.push(port);
+        cycles.push(computer.cpu.a);
+    }
+}
+
+#[allow(non_snake_case)]
+fn exec_343_xthl(_op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+    let l = computer.mem.get(computer.cpu.sp);
+    let h = computer.mem.get(computer.cpu.sp.wrapping_add(1));
+    let l = replace(&mut computer.cpu.l, l);
+    let h = replace(&mut computer.cpu.h, h);
+    computer.mem.set(computer.cpu.sp, l);
+    computer.mem.set(computer.cpu.sp.wrapping_add(1), h);
+    computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+    if let Some(cycles) = cycles {
+        cycles.push(computer.cpu.l);
+        cycles.push(l);
+        cycles.push(computer.cpu.h);
+        cycles.push(h);
+    }
+}
+
+#[allow(non_snake_case)]
+fn exec_353_xchg(_op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) {
+    swap(&mut computer.cpu.h, &mut computer.cpu.d);
+    swap(&mut computer.cpu.l, &mut computer.cpu.e);
+    computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+}
+
+#[allow(non_snake_case)]
+fn exec_363_di(_op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) {
+    computer.cpu.interrupts_enabled = false;
+    computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+}
+
+#[allow(non_snake_case)]
+fn exec_373_ei(_op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) {
+    computer.cpu.interrupts_enabled = true;
+    computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+}
+
+#[allow(non_snake_case)]
+fn exec_3X4_ccc(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+    let cond = OpCond::n((op_code >> 3) & 0x07).unwrap();
+    if cond.test(computer.cpu.psw) {
+        exec_3O5_call(op_code, computer, cycles);
+    } else {
+        computer.cpu.pc = computer.cpu.pc.wrapping_add(3);
+    }
+}
+
+#[allow(non_snake_case)]
+fn exec_3E5_push(op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+    let rp = OpRegWord::n((op_code >> 3) & 0x06).unwrap();
+    let w = computer.reg_word(rp);
+    computer.mem.set(computer.cpu.sp.wrapping_sub(1), (w >> 8) as u8);
+    computer.mem.set(computer.cpu.sp.wrapping_sub(2), w as u8);
+    computer.cpu.sp = computer.cpu.sp.wrapping_sub(2);
+    computer.cpu.pc = computer.cpu.pc.wrapping_add(1);
+    if let Some(cycles) = cycles {
+        cycles.push(w as u8);
+        cycles.push((w >> 8) as u8);
+    }
+}
+
+#[allow(non_snake_case)]
+fn exec_3O5_call(_op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+    let addr = computer.load_word();
+    let ret = computer.cpu.pc.wrapping_add(3);
+    computer.mem.set(computer.cpu.sp.wrapping_sub(2), ret as u8);
+    computer.mem.set(computer.cpu.sp.wrapping_sub(1), (ret >> 8) as u8);
+    computer.cpu.sp = computer.cpu.sp.wrapping_sub(2);
+    computer.cpu.pc = addr;
+    if let Some(cycles) = cycles {
+        cycles.push(addr as u8);
+        cycles.push((addr >> 8) as u8);
+        cycles.push(ret as u8);
+        cycles.push((ret >> 8) as u8);
+    }
+}
+
+#[allow(non_snake_case)]
+fn exec_306_adi(_op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+    let d = computer.load_byte();
+    let a = computer.cpu.a;
+    computer.cpu.a = execute_add(computer, a, d, false);
+    computer.cpu.pc = computer.cpu.pc.wrapping_add(2);
+    if let Some(cycles) = cycles {
+        cycles.push(d);
+    }
+}
+
+#[allow(non_snake_case)]
+fn exec_316_aci(_op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+    let d = computer.load_byte();
+    let a = computer.cpu.a;
+    let c = computer.cpu.psw.carry();
+    computer.cpu.a = execute_add(computer, a, d, c);
+    computer.cpu.pc = computer.cpu.pc.wrapping_add(2);
+    if let Some(cycles) = cycles {
+        cycles.push(d);
+    }
+}
+
+#[allow(non_snake_case)]
+fn exec_326_sui(_op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+    let d = computer.load_byte();
+    let a = computer.cpu.a;
+    let a = execute_sub(computer, a, d, false);
+    computer.cpu.a = a;
+    computer.cpu.pc = computer.cpu.pc.wrapping_add(2);
+    if let Some(cycles) = cycles {
+        cycles.push(d);
+    }
+}
+
+#[allow(non_snake_case)]
+fn exec_336_sbi(_op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+    let d = computer.load_byte();
+    let a = computer.cpu.a;
+    let c = computer.cpu.psw.carry();
+    let a = execute_sub(computer, a, d, c);
+    computer.cpu.a = a;
+    computer.cpu.pc = computer.cpu.pc.wrapping_add(2);
+    if let Some(cycles) = cycles {
+        cycles.push(d);
+    }
+}
+
+#[allow(non_snake_case)]
+fn exec_346_ani(_op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+    let d = computer.load_byte();
+    computer.cpu.psw.set_aux_carry(false);
+    computer.cpu.psw.set_carry(false);
+    computer.cpu.a &= d;
+    computer.cpu.psw.check(computer.cpu.a);
+    computer.cpu.pc = computer.cpu.pc.wrapping_add(2);
+    if let Some(cycles) = cycles {
+        cycles.push(d);
+    }
+}
+
+#[allow(non_snake_case)]
+fn exec_356_xri(_op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+    let d = computer.load_byte();
+    computer.cpu.psw.set_aux_carry(false);
+    computer.cpu.psw.set_carry(false);
+    computer.cpu.a ^= d;
+    computer.cpu.psw.check(computer.cpu.a);
+    computer.cpu.pc = computer.cpu.pc.wrapping_add(2);
+    if let Some(cycles) = cycles {
+        cycles.push(d);
+    }
+}
+
+#[allow(non_snake_case)]
+fn exec_366_ori(_op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+    let d = computer.load_byte();
+    computer.cpu.psw.set_aux_carry(false);
+    computer.cpu.psw.set_carry(false);
+    computer.cpu.a |= d;
+    computer.cpu.psw.check(computer.cpu.a);
+    computer.cpu.pc = computer.cpu.pc.wrapping_add(2);
+    if let Some(cycles) = cycles {
+        cycles.push(d);
+    }
+}
+
+#[allow(non_snake_case)]
+fn exec_376_cpi(_op_code: u8, computer: &mut Computer, cycles: Option<&mut MachineCycles>) {
+    let d = computer.load_byte();
+    let a = computer.cpu.a;
+    execute_sub(computer, a, d, false);
+    computer.cpu.pc = computer.cpu.pc.wrapping_add(2);
+    if let Some(cycles) = cycles {
+        cycles.push(d);
+    }
+}
+
+#[allow(non_snake_case)]
+fn exec_3X7_rst(op_code: u8, computer: &mut Computer, _cycles: Option<&mut MachineCycles>) {
+    let a = OpTriplet::n((op_code >> 3) & 0x07).unwrap();
+    computer.cpu.pc = ((a as u8) << 3) as u16;
+}
+
+const EXEC: [fn(u8, &mut Computer, Option<&mut MachineCycles>); 256] = [
+    exec_0X0_nop, exec_0E1_lxi,  exec_0F2_stax, exec_0E3_inx,  exec_0X4_inr, exec_0X5_dcr,  exec_0X6_mvi, exec_007_rlc,
+    exec_0X0_nop, exec_0O1_dad,  exec_0P2_ldax, exec_0O3_dcx,  exec_0X4_inr, exec_0X5_dcr,  exec_0X6_mvi, exec_017_rrc,
+    exec_0X0_nop, exec_0E1_lxi,  exec_0F2_stax, exec_0E3_inx,  exec_0X4_inr, exec_0X5_dcr,  exec_0X6_mvi, exec_027_ral,
+    exec_0X0_nop, exec_0O1_dad,  exec_0P2_ldax, exec_0O3_dcx,  exec_0X4_inr, exec_0X5_dcr,  exec_0X6_mvi, exec_037_rar,
+    exec_0X0_nop, exec_0E1_lxi,  exec_042_shld, exec_0E3_inx,  exec_0X4_inr, exec_0X5_dcr,  exec_0X6_mvi, exec_047_daa,
+    exec_0X0_nop, exec_0O1_dad,  exec_052_lhld, exec_0O3_dcx,  exec_0X4_inr, exec_0X5_dcr,  exec_0X6_mvi, exec_057_cma,
+    exec_0X0_nop, exec_0E1_lxi,  exec_062_sta,  exec_0E3_inx,  exec_0X4_inr, exec_0X5_dcr,  exec_0X6_mvi, exec_067_stc,
+    exec_0X0_nop, exec_0O1_dad,  exec_072_lda,  exec_0O3_dcx,  exec_0X4_inr, exec_0X5_dcr,  exec_0X6_mvi, exec_077_cmc,
+
+    exec_1XX_mov, exec_1XX_mov,  exec_1XX_mov,  exec_1XX_mov,  exec_1XX_mov, exec_1XX_mov,  exec_1XX_mov, exec_1XX_mov,
+    exec_1XX_mov, exec_1XX_mov,  exec_1XX_mov,  exec_1XX_mov,  exec_1XX_mov, exec_1XX_mov,  exec_1XX_mov, exec_1XX_mov,
+    exec_1XX_mov, exec_1XX_mov,  exec_1XX_mov,  exec_1XX_mov,  exec_1XX_mov, exec_1XX_mov,  exec_1XX_mov, exec_1XX_mov,
+    exec_1XX_mov, exec_1XX_mov,  exec_1XX_mov,  exec_1XX_mov,  exec_1XX_mov, exec_1XX_mov,  exec_1XX_mov, exec_1XX_mov,
+    exec_1XX_mov, exec_1XX_mov,  exec_1XX_mov,  exec_1XX_mov,  exec_1XX_mov, exec_1XX_mov,  exec_1XX_mov, exec_1XX_mov,
+    exec_1XX_mov, exec_1XX_mov,  exec_1XX_mov,  exec_1XX_mov,  exec_1XX_mov, exec_1XX_mov,  exec_1XX_mov, exec_1XX_mov,
+    exec_1XX_mov, exec_1XX_mov,  exec_1XX_mov,  exec_1XX_mov,  exec_1XX_mov, exec_1XX_mov,  exec_166_hlt, exec_1XX_mov,
+    exec_1XX_mov, exec_1XX_mov,  exec_1XX_mov,  exec_1XX_mov,  exec_1XX_mov, exec_1XX_mov,  exec_1XX_mov, exec_1XX_mov,
+
+    exec_20X_add, exec_20X_add,  exec_20X_add,  exec_20X_add,  exec_20X_add, exec_20X_add,  exec_20X_add, exec_20X_add,
+    exec_21X_adc, exec_21X_adc,  exec_21X_adc,  exec_21X_adc,  exec_21X_adc, exec_21X_adc,  exec_21X_adc, exec_21X_adc,
+    exec_22X_sub, exec_22X_sub,  exec_22X_sub,  exec_22X_sub,  exec_22X_sub, exec_22X_sub,  exec_22X_sub, exec_22X_sub,
+    exec_23X_sbb, exec_23X_sbb,  exec_23X_sbb,  exec_23X_sbb,  exec_23X_sbb, exec_23X_sbb,  exec_23X_sbb, exec_23X_sbb,
+    exec_24X_ana, exec_24X_ana,  exec_24X_ana,  exec_24X_ana,  exec_24X_ana, exec_24X_ana,  exec_24X_ana, exec_24X_ana,
+    exec_25X_xra, exec_25X_xra,  exec_25X_xra,  exec_25X_xra,  exec_25X_xra, exec_25X_xra,  exec_25X_xra, exec_25X_xra,
+    exec_26X_ora, exec_26X_ora,  exec_26X_ora,  exec_26X_ora,  exec_26X_ora, exec_26X_ora,  exec_26X_ora, exec_26X_ora,
+    exec_27X_cmp, exec_27X_cmp,  exec_27X_cmp,  exec_27X_cmp,  exec_27X_cmp, exec_27X_cmp,  exec_27X_cmp, exec_27X_cmp,
+
+    exec_3X0_rcc, exec_3E1_pop,  exec_3X2_jcc,  exec_3Z3_jmp,  exec_3X4_ccc, exec_3E5_push, exec_306_adi, exec_3X7_rst,
+    exec_3X0_rcc, exec_3P1_ret,  exec_3X2_jcc,  exec_3Z3_jmp,  exec_3X4_ccc, exec_3O5_call, exec_316_aci, exec_3X7_rst,
+    exec_3X0_rcc, exec_3E1_pop,  exec_3X2_jcc,  exec_323_out,  exec_3X4_ccc, exec_3E5_push, exec_326_sui, exec_3X7_rst,
+    exec_3X0_rcc, exec_3P1_ret,  exec_3X2_jcc,  exec_333_in,   exec_3X4_ccc, exec_3O5_call, exec_336_sbi, exec_3X7_rst,
+    exec_3X0_rcc, exec_3E1_pop,  exec_3X2_jcc,  exec_343_xthl, exec_3X4_ccc, exec_3E5_push, exec_346_ani, exec_3X7_rst,
+    exec_3X0_rcc, exec_351_pchl, exec_3X2_jcc,  exec_353_xchg, exec_3X4_ccc, exec_3O5_call, exec_356_xri, exec_3X7_rst,
+    exec_3X0_rcc, exec_3E1_pop,  exec_3X2_jcc,  exec_363_di,   exec_3X4_ccc, exec_3E5_push, exec_366_ori, exec_3X7_rst,
+    exec_3X0_rcc, exec_371_sphl, exec_3X2_jcc,  exec_373_ei,   exec_3X4_ccc, exec_3O5_call, exec_376_cpi, exec_3X7_rst,
+];
