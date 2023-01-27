@@ -10,8 +10,6 @@
 
 #![no_std]
 
-pub mod i8080a;
-
 extern crate alloc;
 
 mod base;
