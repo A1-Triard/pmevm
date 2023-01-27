@@ -1,3 +1,4 @@
+#![feature(bigint_helper_methods)]
 #![feature(const_trait_impl)]
 #![feature(generic_arg_infer)]
 #![feature(trait_alias)]
@@ -8,6 +9,8 @@
 #![doc(test(attr(allow(unused_variables))))]
 
 #![no_std]
+
+pub mod i8080a;
 
 extern crate alloc;
 
