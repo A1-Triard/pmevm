@@ -116,7 +116,7 @@ enum Flag {
 
 impl Flag {
     fn set(self, flags: &mut u8, value: bool) {
-        *flags = *flags | ((value as u8) << (self as u8)) & !(((!value) as u8) << (self as u8));
+        *flags = (*flags | ((value as u8) << (self as u8))) & !(((!value) as u8) << (self as u8));
     }
 }
 
@@ -2117,7 +2117,7 @@ fn e_361_pop_af(computer: &mut Computer, cycles: Option<&mut MachineCycles>) -> 
     let sp = computer.cpu.regs[RegW::Sp];
     computer.cpu.regs[RegW::Sp] = sp.wrapping_add(2);
     computer.cpu.regs[RegB::A] = computer.mem[sp.wrapping_add(1)];
-    computer.cpu.regs[RegB::F] = computer.mem[sp] & !0x28 | 0x02;
+    computer.cpu.regs[RegB::F] = (computer.mem[sp] & !0x28) | 0x02;
     if let Some(cycles) = cycles {
         cycles.push(computer.cpu.regs[RegB::F]);
         cycles.push(computer.cpu.regs[RegB::A]);
