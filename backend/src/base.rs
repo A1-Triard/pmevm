@@ -70,7 +70,7 @@ impl Clone for Regs {
 
 impl Regs {
     fn new() -> Regs {
-        let this = Regs { b: [0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0 ] };
+        let this = Regs { b: [0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0 ] };
         debug_assert!(this[RegB::F] == 0b00000010);
         this
     }
