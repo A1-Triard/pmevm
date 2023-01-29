@@ -21,8 +21,6 @@
 
 extern crate alloc;
 #[cfg(target_os="dos")]
-extern crate dos_errno_and_panic;
-#[cfg(target_os="dos")]
 extern crate pc_atomics;
 extern crate rlibc;
 
@@ -527,7 +525,7 @@ extern "stdcall" fn mainCRTStartup(_: *const PEB) -> u64 {
 
 fn start() {
     let screen = unsafe { tuifw_screen::init(Some((132, 80)), Some(&no_std::ERROR_ALLOCATOR)) }.unwrap();
-    let mut windows = WindowTree::new(screen, render);
+    let mut windows = WindowTree::new(screen, render).unwrap();
     let mut pmevm = Pmevm {
         colors: &COLOR,
         computer: Computer::new(),

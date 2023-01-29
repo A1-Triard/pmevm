@@ -22,9 +22,9 @@ checksum = "a20104e2335ce8a659d6dd92a51a767a0c062599c73b343fd152cb401e828c3d"
 
 [[package]]
 name = "components-arena"
-version = "3.4.1"
+version = "3.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c3dc609805d4464bdc23cd4bc110af4cace017b5cc6f283239396c29167ccd7a"
+checksum = "a330ed16bf01066d2593789f308336dee1efb9d71c992ee6d7a917e81753be66"
 dependencies = [
  "components-arena-traits",
  "composable-allocators",
@@ -63,12 +63,11 @@ dependencies = [
 
 [[package]]
 name = "dos-cp"
-version = "0.3.1"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e7839372cde2b0af58a7141da2aff9d177c18f607641c77ed28150c3d33dfd1b"
+checksum = "700409afaf703e5cfd013b9f2f7cf3f393fa37a34c5c7e618a6c135a6df5ff9d"
 dependencies = [
  "either",
- "errno-no-std",
  "exit-no-std",
  "iter-identify_first_last",
  "panicking",
@@ -77,9 +76,9 @@ dependencies = [
 
 [[package]]
 name = "dos-cp-generator"
-version = "0.3.1"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8cbb22fdfdcb52e7ae2fea92da454f168489fb45261e74a0baaf85719083acaa"
+checksum = "a6b43c34b27109aeae585f25f4146c3c6fcec9c3c247bacef49d5f69d5b39608"
 dependencies = [
  "dos-cp",
  "panicking",
@@ -429,12 +428,10 @@ dependencies = [
 
 [[package]]
 name = "tuifw-screen"
-version = "0.19.0"
+version = "0.21.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1937df4901bab52246008ee8476ec7528cf3da979d2b03ace23b9112b7652387"
+checksum = "2dbc7cb99dde7a274e24683bfbb69f9933b3752f28b75cbc38628b22f84abead"
 dependencies = [
- "composable-allocators",
- "errno-no-std",
  "tuifw-screen-base",
  "tuifw-screen-dos",
  "tuifw-screen-ncurses",
@@ -443,37 +440,38 @@ dependencies = [
 
 [[package]]
 name = "tuifw-screen-base"
-version = "0.19.0"
+version = "0.21.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "24269601285ba75ba19a9a382d2960c322a9609f210be5f5558ad85c1a86230e"
+checksum = "5517fea04387dba340f230e9aeb4b7eda2175b4493f6097b4d17faf2c0874592"
 dependencies = [
  "enum-derive-2018",
- "errno-no-std",
  "int-vec-2d",
  "macro-attr-2018",
 ]
 
 [[package]]
 name = "tuifw-screen-dos"
-version = "0.19.0"
+version = "0.21.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d2c1ea805272949c56720a858ce09be6df2aa03915a0f00b8ce63e13c1f3540"
+checksum = "ab06b1088c88cd4ee56f5560e1831c4c6123ddfdc90561f353fde346b6eba6aa"
 dependencies = [
+ "composable-allocators",
  "dos-cp",
  "either",
- "errno-no-std",
  "panicking",
  "pc-ints",
  "tuifw-screen-base",
+ "unicode-width",
 ]
 
 [[package]]
 name = "tuifw-screen-ncurses"
-version = "0.19.0"
+version = "0.21.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "642f83e828c0529a5bdb71057ffc9f6b50a6911a5f5ba81704541dd1644ba3d4"
+checksum = "c7ff818c983a0e65d52a54a804c573dd95b2d904f37ee4212184c10bb9a4b3a9"
 dependencies = [
  "cc",
+ "composable-allocators",
  "either",
  "errno-no-std",
  "itertools",
@@ -486,10 +484,11 @@ dependencies = [
 
 [[package]]
 name = "tuifw-screen-winapi"
-version = "0.19.0"
+version = "0.21.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a4dbbf410997aedce5b1eeb709bf4004e353876dc3d10ba68878e6bd8331e6e1"
+checksum = "387b8b435b27f9ebd6173fe7a66e7734d6fa6ca3af68a7e53b6252e08c5e82ad"
 dependencies = [
+ "composable-allocators",
  "either",
  "errno-no-std",
  "num-traits",
@@ -501,13 +500,12 @@ dependencies = [
 
 [[package]]
 name = "tuifw-window"
-version = "0.19.0"
+version = "0.21.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2296572ae93b82467ada7139017194b60a363a0adafa4d29703eead236f24566"
+checksum = "0f524a9b50d47fc522e6580080264e0ec0891a38d53e08c080b925e9f7583c4a"
 dependencies = [
  "components-arena",
  "educe",
- "errno-no-std",
  "macro-attr-2018",
  "tuifw-screen-base",
 ]

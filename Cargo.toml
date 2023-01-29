@@ -27,11 +27,11 @@ paste = "1.0.8"
 pmevm-backend = { path = "backend" }
 rlibc = "1.0.0"
 timer-no-std = "0.3.3"
-tuifw-screen = "0.19.0"
-tuifw-window = "0.19.0"
+tuifw-screen = "0.21.1"
+tuifw-window = "0.21.1"
 
 [target.'cfg(target_os="dos")'.dependencies]
 pc-atomics = "0.0.2"
 
 [build-dependencies]
-dos-cp-generator = "0.3.1"
+dos-cp-generator = "0.4.0"
