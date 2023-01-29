@@ -21,7 +21,7 @@ strip = true
 
 [dependencies]
 composable-allocators = { version = "0.2.3", default-features = false, features = ["global"] }
-exit-no-std = "0.2.0"
+panic-no-std = "0.0.1"
 panicking = { version = "0.4.0", default-features = false, features = ["abort"] }
 paste = "1.0.8"
 pmevm-backend = { path = "backend" }
@@ -31,7 +31,6 @@ tuifw-screen = "0.19.0"
 tuifw-window = "0.19.0"
 
 [target.'cfg(target_os="dos")'.dependencies]
-dos-errno-and-panic = "0.0.3"
 pc-atomics = "0.0.2"
 
 [build-dependencies]

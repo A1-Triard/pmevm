@@ -86,16 +86,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "dos-errno-and-panic"
-version = "0.0.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fcb2f728b12e6c96f66c1f44982fbce579c451223fb6604447a73d893086803d"
-dependencies = [
- "exit-no-std",
- "pc-ints",
-]
-
-[[package]]
 name = "educe"
 version = "0.4.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -271,6 +261,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "panic-no-std"
+version = "0.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "180ad0bf4430ca171240bdd1eb6cb62029f58b85469ae676eecaacb116d8b36c"
+dependencies = [
+ "exit-no-std",
+ "libc",
+ "pc-ints",
+ "winapi",
+]
+
+[[package]]
 name = "panicking"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -327,8 +329,7 @@ version = "0.0.0"
 dependencies = [
  "composable-allocators",
  "dos-cp-generator",
- "dos-errno-and-panic",
- "exit-no-std",
+ "panic-no-std",
  "panicking",
  "paste",
  "pc-atomics",

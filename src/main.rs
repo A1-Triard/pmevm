@@ -17,7 +17,7 @@
 
 #![windows_subsystem="console"]
 #![no_std]
-#![cfg_attr(target_os="dos", no_main)]
+#![cfg_attr(any(target_os="dos", windows), no_main)]
 
 extern crate alloc;
 #[cfg(target_os="dos")]
@@ -34,8 +34,6 @@ mod no_std {
     use composable_allocators::{AsGlobal};
     use composable_allocators::stacked::{self, Stacked};
     use core::mem::MaybeUninit;
-    #[cfg(not(target_os="dos"))]
-    use exit_no_std::exit;
 
     #[cfg(not(target_os="dos"))]
     const MEM_SIZE: usize = 322655;
@@ -55,10 +53,9 @@ mod no_std {
         panic!("OOM")
     }
 
-    #[cfg(not(target_os="dos"))]
     #[panic_handler]
-    fn panic(_panic: &core::panic::PanicInfo) -> ! {
-        exit(b'P')
+    fn panic_handler(info: &core::panic::PanicInfo) -> ! {
+        panic_no_std::panic(info, b'P')
     }
 
     const ERROR_MEM_SIZE: usize = 256;
@@ -508,19 +505,19 @@ impl Mode for StepMode {
     }
 }
 
-#[cfg(target_os="dos")]
+#[cfg(any(target_os="dos", windows))]
 extern {
     type PEB;
 }
 
-#[cfg(not(target_os="dos"))]
+#[cfg(all(not(target_os="dos"), not(windows)))]
 #[start]
 fn main(_: isize, _: *const *const u8) -> isize {
     start();
     0
 }
 
-#[cfg(target_os="dos")]
+#[cfg(any(target_os="dos", windows))]
 #[allow(non_snake_case)]
 #[no_mangle]
 extern "stdcall" fn mainCRTStartup(_: *const PEB) -> u64 {
